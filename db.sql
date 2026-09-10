@@ -45,10 +45,14 @@ CREATE TABLE courses (
 
 -- ── 3. FACULTY COURSE ASSIGNMENTS (junction/bridge) ─────────
 CREATE TABLE faculty_course_assignments (
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  faculty_id  INT NOT NULL,
-  course_id   INT NOT NULL,
-  assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  id                    INT AUTO_INCREMENT PRIMARY KEY,
+  faculty_id            INT NOT NULL,
+  course_id             INT NOT NULL,
+  assigned_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  faculty_name          VARCHAR(150),
+  faculty_enrollment_no VARCHAR(20),
+  course_name           VARCHAR(150),
+  course_code           VARCHAR(30),
   FOREIGN KEY (faculty_id) REFERENCES faculty_members(id) ON DELETE CASCADE,
   FOREIGN KEY (course_id)  REFERENCES courses(id) ON DELETE CASCADE,
   UNIQUE KEY uq_assignment (faculty_id, course_id)
@@ -80,7 +84,7 @@ CREATE TABLE payment_records (
   total_amount       DECIMAL(10,2),
   date_of_submission DATE,
   generated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (faculty_id) REFERENCES faculty_members(id)
+  FOREIGN KEY (faculty_id) REFERENCES faculty_members(id) ON DELETE CASCADE
 );
 
 -- ── SEED DATA: Sample Courses ────────────────────────────────

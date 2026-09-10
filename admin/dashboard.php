@@ -13,12 +13,19 @@ $totalRemuneration = (float) $pdo->query("SELECT COALESCE(SUM(amount),0) FROM le
 
 $recentFaculty = $pdo->query("
     SELECT fm.*, 
-        COUNT(DISTINCT fca.course_id) AS course_count,
-        COALESCE(SUM(le.amount),0)    AS total_earned
+        COALESCE(ca.course_count, 0) AS course_count,
+        COALESCE(le.total_earned, 0) AS total_earned
     FROM faculty_members fm
-    LEFT JOIN faculty_course_assignments fca ON fca.faculty_id = fm.id
-    LEFT JOIN lecture_entries le ON le.faculty_id = fm.id
-    GROUP BY fm.id
+    LEFT JOIN (
+        SELECT faculty_id, COUNT(DISTINCT course_id) AS course_count
+        FROM faculty_course_assignments
+        GROUP BY faculty_id
+    ) ca ON ca.faculty_id = fm.id
+    LEFT JOIN (
+        SELECT faculty_id, SUM(amount) AS total_earned
+        FROM lecture_entries
+        GROUP BY faculty_id
+    ) le ON le.faculty_id = fm.id
     ORDER BY fm.created_at DESC LIMIT 6
 ")->fetchAll();
 

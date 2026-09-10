@@ -26,26 +26,30 @@ if (!$faculty) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add') {
     $addIds = $_POST['course_ids'] ?? [];
     if (!empty($addIds)) {
-        $allCourseStmt = $pdo->query("SELECT * FROM courses");
-        $courseMap = [];
-        foreach ($allCourseStmt->fetchAll() as $ac) {
-            $courseMap[$ac['id']] = $ac;
+        try {
+            $allCourseStmt = $pdo->query("SELECT * FROM courses");
+            $courseMap = [];
+            foreach ($allCourseStmt->fetchAll() as $ac) {
+                $courseMap[$ac['id']] = $ac;
+            }
+            $assign = $pdo->prepare("
+                INSERT IGNORE INTO faculty_course_assignments
+                    (faculty_id, faculty_name, faculty_enrollment_no, course_id, course_name, course_code)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $addedCount = 0;
+            foreach ($addIds as $cid) {
+                $cid = (int)$cid;
+                if (!$cid) continue;
+                $cName = $courseMap[$cid]['subject_name'] ?? '';
+                $cCode = $courseMap[$cid]['course_code'] ?? '';
+                $assign->execute([$id, $faculty['name'], $faculty['faculty_enrollment_no'], $cid, $cName, $cCode]);
+                $addedCount++;
+            }
+            setFlash('success', $addedCount . ' course(s) assigned to ' . $faculty['name'] . ' successfully.');
+        } catch (PDOException $e) {
+            setFlash('error', 'Failed to assign course(s): ' . $e->getMessage());
         }
-        $assign = $pdo->prepare("
-            INSERT IGNORE INTO faculty_course_assignments
-                (faculty_id, faculty_name, faculty_enrollment_no, course_id, course_name, course_code)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-        $addedCount = 0;
-        foreach ($addIds as $cid) {
-            $cid = (int)$cid;
-            if (!$cid) continue;
-            $cName = $courseMap[$cid]['subject_name'] ?? '';
-            $cCode = $courseMap[$cid]['course_code'] ?? '';
-            $assign->execute([$id, $faculty['name'], $faculty['faculty_enrollment_no'], $cid, $cName, $cCode]);
-            $addedCount++;
-        }
-        setFlash('success', $addedCount . ' course(s) assigned to ' . $faculty['name'] . ' successfully.');
     } else {
         setFlash('error', 'Please select at least one course to add.');
     }
@@ -57,9 +61,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add')
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'remove') {
     $removeCourseId = (int)($_POST['course_id'] ?? 0);
     if ($removeCourseId) {
-        $del = $pdo->prepare("DELETE FROM faculty_course_assignments WHERE faculty_id = ? AND course_id = ?");
-        $del->execute([$id, $removeCourseId]);
-        setFlash('success', 'Course removed from ' . $faculty['name'] . "'s assignments.");
+        try {
+            $del = $pdo->prepare("DELETE FROM faculty_course_assignments WHERE faculty_id = ? AND course_id = ?");
+            $del->execute([$id, $removeCourseId]);
+            setFlash('success', 'Course removed from ' . $faculty['name'] . "'s assignments.");
+        } catch (PDOException $e) {
+            setFlash('error', 'Failed to remove course: ' . $e->getMessage());
+        }
     }
     header('Location: ' . BASE_URL . '/admin/faculty/manage_courses.php?id=' . $id);
     exit;

@@ -101,8 +101,8 @@ $coursesArr   = array_values($groupedCourses);
 // └──────────────────────────────────────────────────────────────────────────┘
 $subjectCount = count($groupedCourses);
 
-if ($subjectCount === 1) {
-    $layout = 'layout_1';          // Full-width single column
+if ($subjectCount <= 1) {
+    $layout = 'layout_1';          // Full-width single column (or empty state if 0)
 } elseif ($subjectCount === 2) {
     $layout = 'layout_2';          // Stacked top & bottom
 } elseif ($subjectCount === 3) {
@@ -110,7 +110,7 @@ if ($subjectCount === 1) {
 } elseif ($subjectCount === 4) {
     $layout = 'layout_4';          // 2×2 grid
 } else {
-    $layout = 'layout_5';          // Summary overview + one page per subject
+    $layout = 'layout_5';          // Summary overview + one page per subject (5+)
 }
 
 // ─── Helper: render UVFIN boxes ───────────────────────────────────────────────

@@ -30,38 +30,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($course_ids)) $errors[] = 'Please assign at least one course.';
 
     if (empty($errors)) {
-        $enrollment_no = generateEnrollmentNo($name, $pdo);
+        try {
+            $enrollment_no = generateEnrollmentNo($name, $pdo);
 
-        $stmt = $pdo->prepare("INSERT INTO faculty_members
-            (faculty_enrollment_no, name, email, phone, address, qualification, department,
-             pan_no, account_no, bank_name, ifsc_code, aadhaar_no)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$enrollment_no, $name, $email, $phone, $address, $qualification,
-                        $department, $pan_no, $account_no, $bank_name, $ifsc_code, $aadhaar_no]);
+            $stmt = $pdo->prepare("INSERT INTO faculty_members
+                (faculty_enrollment_no, name, email, phone, address, qualification, department,
+                 pan_no, account_no, bank_name, ifsc_code, aadhaar_no)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+            $stmt->execute([$enrollment_no, $name, $email, $phone, $address, $qualification,
+                            $department, $pan_no, $account_no, $bank_name, $ifsc_code, $aadhaar_no]);
 
-        $faculty_id = (int) $pdo->lastInsertId();
+            $faculty_id = (int) $pdo->lastInsertId();
 
-        // Fetch course details for readable columns
-        $courseMap = [];
-        foreach ($allCourses as $ac) {
-            $courseMap[$ac['id']] = $ac;
+            // Fetch course details for readable columns
+            $courseMap = [];
+            foreach ($allCourses as $ac) {
+                $courseMap[$ac['id']] = $ac;
+            }
+
+            $assign = $pdo->prepare("
+                INSERT IGNORE INTO faculty_course_assignments
+                    (faculty_id, faculty_name, faculty_enrollment_no, course_id, course_name, course_code)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            foreach ($course_ids as $cid) {
+                $cid = (int)$cid;
+                $cName = $courseMap[$cid]['subject_name'] ?? '';
+                $cCode = $courseMap[$cid]['course_code'] ?? '';
+                $assign->execute([$faculty_id, $name, $enrollment_no, $cid, $cName, $cCode]);
+            }
+
+            setFlash('success', "Faculty \"{$name}\" registered successfully! Enrollment No: {$enrollment_no}");
+            header('Location: ' . BASE_URL . '/admin/faculty/view.php?id=' . $faculty_id);
+            exit;
+        } catch (PDOException $e) {
+            $errors[] = 'Failed to register faculty: ' . $e->getMessage();
         }
-
-        $assign = $pdo->prepare("
-            INSERT IGNORE INTO faculty_course_assignments
-                (faculty_id, faculty_name, faculty_enrollment_no, course_id, course_name, course_code)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-        foreach ($course_ids as $cid) {
-            $cid = (int)$cid;
-            $cName = $courseMap[$cid]['subject_name'] ?? '';
-            $cCode = $courseMap[$cid]['course_code'] ?? '';
-            $assign->execute([$faculty_id, $name, $enrollment_no, $cid, $cName, $cCode]);
-        }
-
-        setFlash('success', "Faculty \"{$name}\" registered successfully! Enrollment No: {$enrollment_no}");
-        header('Location: ' . BASE_URL . '/admin/faculty/view.php?id=' . $faculty_id);
-        exit;
     }
 }
 

@@ -6,8 +6,24 @@ require_once ROOT . '/includes/helpers.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 requireAdmin();
 
+$id = (int)($_GET['id'] ?? 0);
+if (!$id) {
+    setFlash('error', 'Invalid course ID.');
+    header('Location: ' . BASE_URL . '/admin/courses/list.php');
+    exit;
+}
+
+$stmt = $pdo->prepare("SELECT * FROM courses WHERE id = ?");
+$stmt->execute([$id]);
+$course = $stmt->fetch();
+
+if (!$course) {
+    setFlash('error', 'Course not found.');
+    header('Location: ' . BASE_URL . '/admin/courses/list.php');
+    exit;
+}
+
 $errors = [];
-$success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $program      = trim($_POST['program']      ?? '');
@@ -22,25 +38,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
         try {
-            $stmt = $pdo->prepare("INSERT INTO courses (program, semester, subject_name, course_code, class_type) VALUES (?,?,?,?,?)");
-            $stmt->execute([$program, $semester, $subject_name, $course_code, $class_type]);
-            setFlash('success', "Course \"{$subject_name}\" added successfully!");
+            $pdo->beginTransaction();
+
+            $upd = $pdo->prepare("
+                UPDATE courses 
+                SET program = ?, semester = ?, subject_name = ?, course_code = ?, class_type = ?
+                WHERE id = ?
+            ");
+            $upd->execute([$program, $semester, $subject_name, $course_code, $class_type, $id]);
+
+            // Synchronize course name & code in faculty_course_assignments
+            $updFca = $pdo->prepare("
+                UPDATE faculty_course_assignments 
+                SET course_name = ?, course_code = ?
+                WHERE course_id = ?
+            ");
+            $updFca->execute([$subject_name, $course_code, $id]);
+
+            $pdo->commit();
+            setFlash('success', "Course \"{$subject_name}\" updated successfully!");
             header('Location: ' . BASE_URL . '/admin/courses/list.php');
             exit;
         } catch (PDOException $e) {
-            $errors[] = 'Failed to add course: ' . $e->getMessage();
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $errors[] = 'Failed to update course: ' . $e->getMessage();
         }
     }
 }
 
-$active_nav = 'courses-add';
+$active_nav = 'courses-list';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Add Course — SDSF Admin</title>
+<title>Edit Course — SDSF Admin</title>
 <link rel="stylesheet" href="<?= BASE_URL ?>/tailwind/output.css">
 <?php require_once ROOT . '/includes/admin_sidebar.php'; ?>
 </head>
@@ -51,7 +86,7 @@ $active_nav = 'courses-add';
         <span class="tb-sep">/</span>
         <a href="<?= BASE_URL ?>/admin/courses/list.php" style="color:#94a3b8;text-decoration:none;">Courses</a>
         <span class="tb-sep">/</span>
-        <span class="tb-crumb">Add Course</span>
+        <span class="tb-crumb">Edit Course</span>
     </div>
     <div class="tb-right">
         <span class="tb-date"><?= date('d M Y') ?></span>
@@ -61,8 +96,8 @@ $active_nav = 'courses-add';
 
 <div class="page">
     <div class="page-header fade-up">
-        <h1>Add New Course</h1>
-        <p>Create a course/subject that can be assigned to visiting faculty members</p>
+        <h1>Edit Course</h1>
+        <p>Update details for <?= htmlspecialchars($course['subject_name']) ?> (<?= htmlspecialchars($course['course_code'] ?: 'No Code') ?>)</p>
     </div>
 
     <?php foreach ($errors as $e): ?>
@@ -76,9 +111,10 @@ $active_nav = 'courses-add';
         <div class="card fade-up">
             <div class="card-head">
                 <div>
-                    <div class="card-title">Course Details</div>
-                    <div class="card-sub">Fill in the course information below</div>
+                    <div class="card-title">Course Information</div>
+                    <div class="card-sub">Edit the fields below and save changes</div>
                 </div>
+                <a href="<?= BASE_URL ?>/admin/courses/list.php" class="btn btn-outline btn-sm">&larr; Back to Courses</a>
             </div>
             <div style="padding:28px;">
                 <form method="POST" action="">
@@ -87,14 +123,14 @@ $active_nav = 'courses-add';
                             <label class="form-label">Program / Degree *</label>
                             <input type="text" name="program" class="form-input"
                                 placeholder="e.g. M.Sc, MBA, M.Tech AI&DS, B.Sc"
-                                value="<?= htmlspecialchars($_POST['program'] ?? '') ?>" required>
+                                value="<?= htmlspecialchars($_POST['program'] ?? $course['program']) ?>" required>
                             <div style="font-size:12px;color:#94a3b8;margin-top:5px;">e.g. MBA, M.Sc, M.Tech AI&amp;DS</div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Semester</label>
                             <input type="text" name="semester" class="form-input"
                                 placeholder="e.g. 1st Semester, 3rd Semester"
-                                value="<?= htmlspecialchars($_POST['semester'] ?? '') ?>">
+                                value="<?= htmlspecialchars($_POST['semester'] ?? ($course['semester'] ?? '')) ?>">
                         </div>
                     </div>
 
@@ -102,41 +138,34 @@ $active_nav = 'courses-add';
                         <label class="form-label">Subject / Course Name *</label>
                         <input type="text" name="subject_name" class="form-input"
                             placeholder="e.g. ADMS, Business Analytics, DAA"
-                            value="<?= htmlspecialchars($_POST['subject_name'] ?? '') ?>" required>
+                            value="<?= htmlspecialchars($_POST['subject_name'] ?? $course['subject_name']) ?>" required>
                     </div>
 
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label">Course Code</label>
                             <input type="text" name="course_code" class="form-input"
-                                placeholder="e.g. FT-110A, DAA-301"
-                                value="<?= htmlspecialchars($_POST['course_code'] ?? '') ?>">
+                                placeholder="e.g. ADMS-101, MBA-BA-201"
+                                value="<?= htmlspecialchars($_POST['course_code'] ?? ($course['course_code'] ?? '')) ?>"
+                                style="font-family:monospace;">
+                            <div style="font-size:12px;color:#94a3b8;margin-top:5px;">Optional university course identifier</div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Class Type *</label>
+                            <label class="form-label">Class Type &amp; Remuneration Rate *</label>
+                            <?php $selectedType = $_POST['class_type'] ?? $course['class_type']; ?>
                             <select name="class_type" class="form-select" required>
-                                <option value="">— Select Type —</option>
-                                <option value="T" <?= ($_POST['class_type']??'')==='T'?'selected':'' ?>>Theory (T) — ₹800/hour</option>
-                                <option value="P" <?= ($_POST['class_type']??'')==='P'?'selected':'' ?>>Practical (P) — ₹400/hour</option>
+                                <option value="T" <?= $selectedType === 'T' ? 'selected' : '' ?>>Theory (T) — &#8377;800 / hour</option>
+                                <option value="P" <?= $selectedType === 'P' ? 'selected' : '' ?>>Practical (P) — &#8377;400 / hour</option>
                             </select>
                         </div>
                     </div>
 
-                    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 16px;margin-bottom:24px;">
-                        <div style="font-size:13px;font-weight:600;color:#b45309;margin-bottom:6px;">&#8377; Rate Information</div>
-                        <div style="font-size:13px;color:#92400e;">
-                            Theory (T) classes are paid at <strong>₹800 per hour</strong>.<br>
-                            Practical (P) classes are paid at <strong>₹400 per hour</strong>.<br>
-                            The rate is applied automatically when faculty enter lecture hours.
-                        </div>
-                    </div>
-
-                    <div style="display:flex;gap:12px;">
-                        <button type="submit" class="btn btn-primary">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                            Save Course
+                    <div style="display:flex;gap:12px;margin-top:24px;">
+                        <button type="submit" class="btn btn-primary" style="padding:11px 28px;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            Save Changes
                         </button>
-                        <a href="<?= BASE_URL ?>/admin/courses/list.php" class="btn btn-outline">Cancel</a>
+                        <a href="<?= BASE_URL ?>/admin/courses/list.php" class="btn btn-outline" style="padding:11px 22px;">Cancel</a>
                     </div>
                 </form>
             </div>

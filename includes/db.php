@@ -1,4 +1,7 @@
 <?php
+// Set default timezone to Indian Standard Time (Asia/Kolkata)
+date_default_timezone_set('Asia/Kolkata');
+
 // Database configuration
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'sdsf_faculty_portal');

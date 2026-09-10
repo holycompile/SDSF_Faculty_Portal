@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if (!$lectureDate) {
         $errors[] = 'Please enter the lecture date.';
-    } elseif (strtotime($lectureDate) > time()) {
+    } elseif ($lectureDate > date('Y-m-d')) {
         $errors[] = 'Lecture date cannot be in the future.';
     }
     if ($hours <= 0 || $hours > 12) {
@@ -49,34 +49,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        // Business rules for rates: Theory = 800, Practical = 400
-        $rate = ($matchedCourse['class_type'] === 'T') ? THEORY_RATE : PRACTICAL_RATE;
-        $amount = round($hours * $rate, 2);
+        try {
+            // Business rules for rates: Theory = 800, Practical = 400
+            $rate = ($matchedCourse['class_type'] === 'T') ? THEORY_RATE : PRACTICAL_RATE;
+            $amount = round($hours * $rate, 2);
 
-        $ins = $pdo->prepare("
-            INSERT INTO lecture_entries (faculty_id, course_id, lecture_date, hours, rate_per_hour, amount)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-        $ins->execute([$facultyId, $courseId, $lectureDate, $hours, $rate, $amount]);
+            $ins = $pdo->prepare("
+                INSERT INTO lecture_entries (faculty_id, course_id, lecture_date, hours, rate_per_hour, amount)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $ins->execute([$facultyId, $courseId, $lectureDate, $hours, $rate, $amount]);
 
-        // Calculate monthly total to check 30,000 threshold
-        $month = (int)date('m', strtotime($lectureDate));
-        $year  = (int)date('Y', strtotime($lectureDate));
-        $mStmt = $pdo->prepare("
-            SELECT COALESCE(SUM(amount), 0) FROM lecture_entries
-            WHERE faculty_id = ? AND MONTH(lecture_date) = ? AND YEAR(lecture_date) = ?
-        ");
-        $mStmt->execute([$facultyId, $month, $year]);
-        $monthTotal = (float)$mStmt->fetchColumn();
+            // Calculate monthly total to check 30,000 threshold
+            $month = (int)date('m', strtotime($lectureDate));
+            $year  = (int)date('Y', strtotime($lectureDate));
+            $mStmt = $pdo->prepare("
+                SELECT COALESCE(SUM(amount), 0) FROM lecture_entries
+                WHERE faculty_id = ? AND MONTH(lecture_date) = ? AND YEAR(lecture_date) = ?
+            ");
+            $mStmt->execute([$facultyId, $month, $year]);
+            $monthTotal = (float)$mStmt->fetchColumn();
 
-        if ($monthTotal > 30000) {
-            setFlash('warning', "Lecture logged successfully (Earned: Rs. {$amount})! Note: Your total remuneration for " . date('F Y', strtotime($lectureDate)) . " is now Rs. " . number_format($monthTotal, 2) . ", which exceeds the Rs. 30,000 monthly ceiling.");
-        } else {
-            setFlash('success', "Lecture session logged successfully! Calculated remuneration: Rs. " . number_format($amount, 2));
+            if ($monthTotal > 30000) {
+                setFlash('warning', "Lecture logged successfully (Earned: Rs. {$amount})! Note: Your total remuneration for " . date('F Y', strtotime($lectureDate)) . " is now Rs. " . number_format($monthTotal, 2) . ", which exceeds the Rs. 30,000 monthly ceiling.");
+            } else {
+                setFlash('success', "Lecture session logged successfully! Calculated remuneration: Rs. " . number_format($amount, 2));
+            }
+
+            header('Location: ' . BASE_URL . '/faculty/dashboard.php');
+            exit;
+        } catch (PDOException $e) {
+            $errors[] = 'Failed to log lecture: ' . $e->getMessage();
         }
-
-        header('Location: ' . BASE_URL . '/faculty/dashboard.php');
-        exit;
     }
 }
 

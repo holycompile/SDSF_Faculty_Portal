@@ -30,14 +30,25 @@ if (!$faculty) {
     exit;
 }
 
-// DELETE — cascade removes: faculty_course_assignments, lecture_entries, payment_records
-$del = $pdo->prepare("DELETE FROM faculty_members WHERE id = ?");
-$del->execute([$id]);
+// DELETE with transaction — cascade removes: faculty_course_assignments, lecture_entries, payment_records
+try {
+    $pdo->beginTransaction();
+    // Clean up payment records explicitly to ensure safety regardless of FK cascade config
+    $pdo->prepare("DELETE FROM payment_records WHERE faculty_id = ?")->execute([$id]);
+    $del = $pdo->prepare("DELETE FROM faculty_members WHERE id = ?");
+    $del->execute([$id]);
+    $pdo->commit();
 
-setFlash('success',
-    'Faculty "' . $faculty['name'] . '" (' . $faculty['faculty_enrollment_no'] . ') ' .
-    'and all their records (course assignments, lecture entries) have been permanently deleted.'
-);
+    setFlash('success',
+        'Faculty "' . $faculty['name'] . '" (' . $faculty['faculty_enrollment_no'] . ') ' .
+        'and all their records (course assignments, lecture entries) have been permanently deleted.'
+    );
+} catch (PDOException $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    setFlash('error', 'Failed to delete faculty member: ' . $e->getMessage());
+}
 
 header('Location: ' . BASE_URL . '/admin/faculty/list.php');
 exit;

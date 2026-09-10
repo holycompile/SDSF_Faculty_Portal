@@ -29,9 +29,37 @@ function formatCurrency(float $amount): string {
 function generateEnrollmentNo(string $name, PDO $pdo): string {
     $clean  = preg_replace('/[^A-Za-z]/', '', $name);
     $prefix = strtoupper(substr($clean, 0, 4));
-    $prefix = str_pad($prefix, 4, 'X');
-    $count  = (int) $pdo->query("SELECT COUNT(*) FROM faculty_members")->fetchColumn();
-    return $prefix . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+    if (strlen($prefix) < 4) {
+        $prefix = str_pad($prefix, 4, 'X');
+    }
+
+    // Find the highest existing numeric suffix for this prefix
+    $stmt = $pdo->prepare("SELECT faculty_enrollment_no FROM faculty_members WHERE faculty_enrollment_no LIKE ?");
+    $stmt->execute([$prefix . '%']);
+    $existing = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    $maxNum = 0;
+    foreach ($existing as $enrollment) {
+        $numPart = substr($enrollment, strlen($prefix));
+        if (is_numeric($numPart)) {
+            $val = (int)$numPart;
+            if ($val > $maxNum) {
+                $maxNum = $val;
+            }
+        }
+    }
+
+    $nextNum = $maxNum + 1;
+    // Guaranteed uniqueness: loop until a non-colliding number is found
+    do {
+        $candidate = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+        $check = $pdo->prepare("SELECT COUNT(*) FROM faculty_members WHERE faculty_enrollment_no = ?");
+        $check->execute([$candidate]);
+        if ((int)$check->fetchColumn() === 0) {
+            return $candidate;
+        }
+        $nextNum++;
+    } while (true);
 }
 
 // ─── Month name ──────────────────────────────────────────────────────────────

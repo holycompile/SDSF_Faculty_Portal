@@ -9,13 +9,20 @@ requireAdmin();
 $flash = getFlash();
 
 $sql = "SELECT f.*, 
-        COUNT(DISTINCT fca.course_id) AS course_count,
-        COALESCE(SUM(le.hours), 0) AS total_hours,
-        COALESCE(SUM(le.amount), 0) AS total_earnings
+        COALESCE(ca.course_count, 0) AS course_count,
+        COALESCE(le.total_hours, 0) AS total_hours,
+        COALESCE(le.total_earnings, 0) AS total_earnings
         FROM faculty_members f
-        LEFT JOIN faculty_course_assignments fca ON fca.faculty_id = f.id
-        LEFT JOIN lecture_entries le ON le.faculty_id = f.id
-        GROUP BY f.id
+        LEFT JOIN (
+            SELECT faculty_id, COUNT(DISTINCT course_id) AS course_count
+            FROM faculty_course_assignments
+            GROUP BY faculty_id
+        ) ca ON ca.faculty_id = f.id
+        LEFT JOIN (
+            SELECT faculty_id, SUM(hours) AS total_hours, SUM(amount) AS total_earnings
+            FROM lecture_entries
+            GROUP BY faculty_id
+        ) le ON le.faculty_id = f.id
         ORDER BY f.created_at DESC";
 $facultyList = $pdo->query($sql)->fetchAll();
 

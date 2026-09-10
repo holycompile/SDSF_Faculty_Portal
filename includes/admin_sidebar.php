@@ -141,6 +141,10 @@ table.dt{width:100%;border-collapse:collapse;}
             <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
             Lecture Records
         </a>
+        <a href="<?= BASE_URL ?>/admin/lectures/course_view.php" class="nav-link <?= $_active==='lectures-course-view'?'active':'' ?>">
+            <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            Course-wise View
+        </a>
     </nav>
 
     <div class="sb-footer">
