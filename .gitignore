@@ -1,0 +1,43 @@
+# Dependencies
+/node_modules/
+/vendor/
+
+# Temporary and Scratch directories
+/scratch/
+*.log
+*.tmp
+*.temp
+
+# Environment / Secret configs
+.env
+.env.*
+!.env.example
+includes/mail_config.local.php
+mail_config.local.php
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# Python cache (if any utility scripts used)
+__pycache__/
+*.py[cod]
+
+# XAMPP / Apache / PHP runtime artifacts
+error_log
+php_error_log

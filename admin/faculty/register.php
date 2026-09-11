@@ -32,13 +32,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         try {
             $enrollment_no = generateEnrollmentNo($name, $pdo);
+            $initial_password = 'SDSF@' . substr($enrollment_no, -4);
 
             $stmt = $pdo->prepare("INSERT INTO faculty_members
                 (faculty_enrollment_no, name, email, phone, address, qualification, department,
-                 pan_no, account_no, bank_name, ifsc_code, aadhaar_no)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+                 pan_no, account_no, bank_name, ifsc_code, aadhaar_no, password, is_password_changed)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0)");
             $stmt->execute([$enrollment_no, $name, $email, $phone, $address, $qualification,
-                            $department, $pan_no, $account_no, $bank_name, $ifsc_code, $aadhaar_no]);
+                            $department, $pan_no, $account_no, $bank_name, $ifsc_code, $aadhaar_no, $initial_password]);
 
             $faculty_id = (int) $pdo->lastInsertId();
 
@@ -60,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $assign->execute([$faculty_id, $name, $enrollment_no, $cid, $cName, $cCode]);
             }
 
-            setFlash('success', "Faculty \"{$name}\" registered successfully! Enrollment No: {$enrollment_no}");
+            setFlash('success', "Faculty \"{$name}\" registered successfully! Enrollment No: <strong>{$enrollment_no}</strong> | Initial Password: <strong>{$initial_password}</strong>");
             header('Location: ' . BASE_URL . '/admin/faculty/view.php?id=' . $faculty_id);
             exit;
         } catch (PDOException $e) {

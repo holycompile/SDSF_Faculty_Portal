@@ -85,6 +85,11 @@ $active_nav = 'lectures';
         .course-card { background: #fff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 20px; text-decoration: none; display: block; transition: all 0.22s ease; color: inherit; }
         .course-card:hover { border-color: #4f46e5; box-shadow: 0 8px 28px rgba(79,70,229,.13); transform: translateY(-2px); }
         .course-card--active { border-color: #4f46e5 !important; background: linear-gradient(135deg,#eef2ff 0%,#fff 100%) !important; box-shadow: 0 4px 20px rgba(79,70,229,.15); }
+        .report-dropdown { position: relative; display: inline-block; }
+        .report-menu { display: none; position: absolute; right: 0; top: calc(100% + 6px); background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); min-width: 250px; z-index: 1000; padding: 6px; }
+        .report-menu.show { display: block; }
+        .report-menu a { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border-radius: 8px; color: #1e293b; text-decoration: none; font-size: 13px; font-weight: 500; transition: background 0.15s; }
+        .report-menu a:hover { background: #f1f5f9; color: #4f46e5; }
     </style>
     <?php require_once ROOT . '/includes/admin_sidebar.php'; ?>
 </head>
@@ -97,10 +102,24 @@ $active_nav = 'lectures';
         </div>
         <div class="tb-right">
             <?php if ($filterFaculty > 0): ?>
-                <a href="<?= BASE_URL ?>/admin/reports/generate_html_pdf.php?faculty_id=<?= $filterFaculty ?>&month=<?= $filterMonth ?: date('m') ?>&year=<?= $filterYear ?: date('Y') ?>" target="_blank" class="btn btn-primary btn-sm">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                    Export Annexure-IV PDF
-                </a>
+                <div class="report-dropdown">
+                    <button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation();document.getElementById('overviewReportMenu').classList.toggle('show');" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span>Official Reports</span>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <div id="overviewReportMenu" class="report-menu">
+                        <a href="<?= BASE_URL ?>/admin/reports/annexure_iv.php?faculty_id=<?= $filterFaculty ?>&month=<?= $filterMonth ?: date('m') ?>&year=<?= $filterYear ?: date('Y') ?>" target="_blank">
+                            📄 Annexure-IV (Claim Bill)
+                        </a>
+                        <a href="<?= BASE_URL ?>/admin/reports/visiting_faculty_attendance.php?faculty_id=<?= $filterFaculty ?>&month=<?= $filterMonth ?: date('m') ?>&year=<?= $filterYear ?: date('Y') ?>" target="_blank">
+                            📊 Teaching Attendance Sheet
+                        </a>
+                        <a href="<?= BASE_URL ?>/admin/reports/detailed_remuneration.php?faculty_id=<?= $filterFaculty ?>&month=<?= $filterMonth ?: date('m') ?>&year=<?= $filterYear ?: date('Y') ?>" target="_blank">
+                            📋 Annexure IV-A (Detailed Sheet)
+                        </a>
+                    </div>
+                </div>
             <?php endif; ?>
         </div>
     </header>
@@ -302,5 +321,13 @@ $active_nav = 'lectures';
             <?php endif; ?>
         </div>
     </div>
+    <script>
+    window.addEventListener('click', function(e) {
+        const om = document.getElementById('overviewReportMenu');
+        if (om && !e.target.closest('.report-dropdown')) {
+            om.classList.remove('show');
+        }
+    });
+    </script>
 </body>
 </html>

@@ -106,6 +106,11 @@ $totalCount  = count($lectures);
         .course-card { background: #fff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 20px; text-decoration: none; display: block; transition: all 0.22s ease; color: inherit; }
         .course-card:hover { border-color: #1e3a8a; box-shadow: 0 8px 28px rgba(30,58,138,.13); transform: translateY(-2px); }
         .course-card--active { border-color: #1e3a8a !important; background: linear-gradient(135deg,#eff6ff 0%,#fff 100%) !important; box-shadow: 0 4px 20px rgba(30,58,138,.15); }
+        .report-dropdown { position: relative; display: inline-block; }
+        .report-menu { display: none; position: absolute; right: 0; top: calc(100% + 6px); background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); min-width: 250px; z-index: 1000; padding: 6px; }
+        .report-menu.show { display: block; }
+        .report-menu a { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border-radius: 8px; color: #1e293b; text-decoration: none; font-size: 13px; font-weight: 500; transition: background 0.15s; }
+        .report-menu a:hover { background: #f1f5f9; color: #1e3a8a; }
     </style>
     <?php require_once ROOT . '/includes/faculty_sidebar.php'; ?>
 </head>
@@ -114,12 +119,25 @@ $totalCount  = count($lectures);
         <div class="tb-left">
             <span class="tb-crumb">Lecture History</span>
         </div>
-        <div class="tb-right">
-            <span class="tb-date"><?= date('l, d F Y') ?></span>
-            <a href="<?= BASE_URL ?>/admin/reports/generate_html_pdf.php?faculty_id=<?= $facultyId ?>&month=<?= $filterMonth ?: date('m') ?>&year=<?= $filterYear ?: date('Y') ?>" target="_blank" class="btn btn-outline btn-sm">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                Download Bill (PDF)
-            </a>
+        <div class="tb-right" style="display:flex;align-items:center;gap:10px;">
+            <div class="report-dropdown">
+                <button type="button" class="btn btn-outline btn-sm" onclick="event.stopPropagation();document.getElementById('historyReportMenu').classList.toggle('show');" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;background:#fff;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <span>Official Reports</span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div id="historyReportMenu" class="report-menu">
+                    <a href="<?= BASE_URL ?>/admin/reports/annexure_iv.php?faculty_id=<?= $facultyId ?>&month=<?= $filterMonth ?: date('m') ?>&year=<?= $filterYear ?: date('Y') ?>" target="_blank">
+                        📄 Annexure-IV (Claim Bill)
+                    </a>
+                    <a href="<?= BASE_URL ?>/admin/reports/visiting_faculty_attendance.php?faculty_id=<?= $facultyId ?>&month=<?= $filterMonth ?: date('m') ?>&year=<?= $filterYear ?: date('Y') ?>" target="_blank">
+                        📊 Teaching Attendance Sheet
+                    </a>
+                    <a href="<?= BASE_URL ?>/admin/reports/detailed_remuneration.php?faculty_id=<?= $facultyId ?>&month=<?= $filterMonth ?: date('m') ?>&year=<?= $filterYear ?: date('Y') ?>" target="_blank">
+                        📋 Annexure IV-A (Detailed Sheet)
+                    </a>
+                </div>
+            </div>
             <a href="<?= BASE_URL ?>/faculty/lecture_entry.php" class="btn btn-primary btn-sm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Log Lecture

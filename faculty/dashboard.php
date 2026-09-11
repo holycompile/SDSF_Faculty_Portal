@@ -140,10 +140,15 @@ $active_nav = 'dashboard';
                         </p>
                     </div>
                 </div>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                    <a href="<?= BASE_URL ?>/admin/reports/generate_html_pdf.php?faculty_id=<?= $facultyId ?>&month=<?= $currentMonth ?>&year=<?= $currentYear ?>" target="_blank" class="btn btn-outline" style="font-size:13.5px;padding:9px 16px;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                        Download <?= date('F') ?> Bill
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <a href="<?= BASE_URL ?>/admin/reports/annexure_iv.php?faculty_id=<?= $facultyId ?>&month=<?= $currentMonth ?>&year=<?= $currentYear ?>" target="_blank" class="btn btn-outline" style="font-size:13px;padding:8px 14px;" title="Official Annexure-IV Bill">
+                        📄 Annexure-IV
+                    </a>
+                    <a href="<?= BASE_URL ?>/admin/reports/visiting_faculty_attendance.php?faculty_id=<?= $facultyId ?>&month=<?= $currentMonth ?>&year=<?= $currentYear ?>" target="_blank" class="btn btn-outline" style="font-size:13px;padding:8px 14px;" title="Visiting Faculty Teaching Attendance">
+                        📊 Attendance
+                    </a>
+                    <a href="<?= BASE_URL ?>/admin/reports/detailed_remuneration.php?faculty_id=<?= $facultyId ?>&month=<?= $currentMonth ?>&year=<?= $currentYear ?>" target="_blank" class="btn btn-outline" style="font-size:13px;padding:8px 14px;" title="Annexure IV-A Detailed Remuneration">
+                        📋 Annexure IV-A
                     </a>
                     <a href="<?= BASE_URL ?>/faculty/lecture_entry.php" class="btn btn-primary" style="padding:10px 18px;font-size:13.5px;">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -211,17 +216,17 @@ $active_nav = 'dashboard';
             </div>
         </div>
 
-        <!-- Official Remuneration Bill & Teaching Attendance PDF Generator Card -->
+        <!-- Official Remuneration & Attendance Documents Generator Card -->
         <div class="card" style="margin-bottom:28px;border:1.5px solid #bfdbfe;background:#f8fafc;">
             <div class="card-head" style="background:#ffffff;">
                 <div>
-                    <h2 style="font-size:16px;font-weight:700;color:#1e3a8a;margin:0;">Official Remuneration Bill & Teaching Attendance (Combined PDF)</h2>
-                    <div style="font-size:12.5px;color:#64748b;margin-top:2px;">Generate and print your official combined Annexure-IV Remuneration claim with attached Teaching Attendance details.</div>
+                    <h2 style="font-size:16px;font-weight:700;color:#1e3a8a;margin:0;">Official Monthly Documents &amp; Reports</h2>
+                    <div style="font-size:12.5px;color:#64748b;margin-top:2px;">Select the billing period and generate any of the 3 official DAVV documents ready for print and submission.</div>
                 </div>
-                <span class="badge badge-blue">Official DAVV Unified Report</span>
+                <span class="badge badge-blue">Official DAVV Formats</span>
             </div>
             <div style="padding:20px 24px;">
-                <form action="<?= BASE_URL ?>/admin/reports/generate_html_pdf.php" method="GET" target="_blank" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+                <form method="GET" target="_blank" style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;">
                     <input type="hidden" name="faculty_id" value="<?= $facultyId ?>">
                     <div>
                         <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Month</label>
@@ -241,10 +246,15 @@ $active_nav = 'dashboard';
                             <?php endfor; ?>
                         </select>
                     </div>
-                    <div>
-                        <button type="submit" class="btn btn-primary" style="padding:10px 22px;">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                            Download Remuneration & Attendance Bill (PDF)
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <button type="submit" formaction="<?= BASE_URL ?>/admin/reports/annexure_iv.php" class="btn btn-primary" style="padding:10px 16px;">
+                            📄 Annexure-IV (Bill)
+                        </button>
+                        <button type="submit" formaction="<?= BASE_URL ?>/admin/reports/visiting_faculty_attendance.php" class="btn btn-outline" style="background:#fff;padding:10px 16px;">
+                            📊 Attendance Sheet
+                        </button>
+                        <button type="submit" formaction="<?= BASE_URL ?>/admin/reports/detailed_remuneration.php" class="btn btn-outline" style="background:#fff;padding:10px 16px;">
+                            📋 Annexure IV-A (Detailed)
                         </button>
                     </div>
                 </form>

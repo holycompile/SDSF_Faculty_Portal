@@ -28,6 +28,8 @@ CREATE TABLE faculty_members (
   bank_name             VARCHAR(100),
   ifsc_code             VARCHAR(20),
   aadhaar_no            VARCHAR(20),
+  password              VARCHAR(255) NULL,
+  is_password_changed   TINYINT DEFAULT 0,
   status                ENUM('active','inactive') DEFAULT 'active',
   created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -85,6 +87,45 @@ CREATE TABLE payment_records (
   date_of_submission DATE,
   generated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (faculty_id) REFERENCES faculty_members(id) ON DELETE CASCADE
+);
+
+-- ── 6. MONTHLY REPORT SUBMISSIONS (Permanent Snapshot) ──────
+CREATE TABLE IF NOT EXISTS monthly_report_submissions (
+  id                       INT AUTO_INCREMENT PRIMARY KEY,
+  faculty_id               INT NOT NULL,
+  month                    TINYINT NOT NULL   COMMENT '1-12',
+  year                     SMALLINT NOT NULL,
+  submission_date          DATE NOT NULL,
+  attendance_register_page VARCHAR(50) DEFAULT 'Page 02 - S.No. - 19',
+  cheque_no                VARCHAR(50) NULL,
+  theory_hours             DECIMAL(6,1) DEFAULT 0.0,
+  tutorial_hours           DECIMAL(6,1) DEFAULT 0.0,
+  practical_hours          DECIMAL(6,1) DEFAULT 0.0,
+  total_hours              DECIMAL(6,1) DEFAULT 0.0,
+  theory_rate              DECIMAL(8,2) DEFAULT 800.00,
+  practical_rate           DECIMAL(8,2) DEFAULT 400.00,
+  theory_amount            DECIMAL(10,2) DEFAULT 0.00,
+  practical_amount         DECIMAL(10,2) DEFAULT 0.00,
+  total_amount             DECIMAL(10,2) DEFAULT 0.00,
+  programs_covered         TEXT NULL,
+  status                   ENUM('draft', 'submitted', 'verified', 'paid') DEFAULT 'submitted',
+  created_at               TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at               TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (faculty_id) REFERENCES faculty_members(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_faculty_month_year (faculty_id, month, year)
+);
+
+-- ── 7. PASSWORD RESET OTPS ──────────────────────────────────
+CREATE TABLE IF NOT EXISTS password_reset_otps (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  user_type   ENUM('faculty', 'admin') NOT NULL,
+  identifier  VARCHAR(150) NOT NULL,
+  email       VARCHAR(150) NOT NULL,
+  otp         VARCHAR(10) NOT NULL,
+  expires_at  DATETIME NOT NULL,
+  is_used     TINYINT DEFAULT 0,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_otp (user_type, identifier, otp, is_used)
 );
 
 -- ── SEED DATA: Sample Courses ────────────────────────────────
