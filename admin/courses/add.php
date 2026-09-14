@@ -82,19 +82,33 @@ $active_nav = 'courses-add';
             </div>
             <div style="padding:28px;">
                 <form method="POST" action="">
+                    <?php
+                    $defaultProgram = $_GET['program'] ?? ($_POST['program'] ?? 'M.Tech AI&DS');
+                    $defaultSemester = $_GET['semester'] ?? ($_POST['semester'] ?? '1st Semester');
+                    $semList = [
+                        '1st Semester', '2nd Semester', '3rd Semester',
+                        '4th Semester', '5th Semester', '6th Semester',
+                        '7th Semester', '8th Semester', '9th Semester'
+                    ];
+                    ?>
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label">Program / Degree *</label>
                             <input type="text" name="program" class="form-input"
-                                placeholder="e.g. M.Sc, MBA, M.Tech AI&DS, B.Sc"
-                                value="<?= htmlspecialchars($_POST['program'] ?? '') ?>" required>
-                            <div style="font-size:12px;color:#94a3b8;margin-top:5px;">e.g. MBA, M.Sc, M.Tech AI&amp;DS</div>
+                                placeholder="e.g. M.Tech AI&DS"
+                                value="<?= htmlspecialchars($defaultProgram) ?>" required>
+                            <div style="font-size:12px;color:#94a3b8;margin-top:5px;">Primary department program: <strong>M.Tech AI&amp;DS</strong></div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Semester</label>
-                            <input type="text" name="semester" class="form-input"
-                                placeholder="e.g. 1st Semester, 3rd Semester"
-                                value="<?= htmlspecialchars($_POST['semester'] ?? '') ?>">
+                            <label class="form-label">Semester *</label>
+                            <select name="semester" class="form-select" required>
+                                <?php foreach ($semList as $s): ?>
+                                    <option value="<?= htmlspecialchars($s) ?>" <?= $defaultSemester === $s ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($s) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div style="font-size:12px;color:#94a3b8;margin-top:5px;">Select which of the 9 semesters this subject belongs to</div>
                         </div>
                     </div>
 

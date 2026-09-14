@@ -23,6 +23,21 @@ if (!$faculty) {
     exit;
 }
 
+// Handle Remuneration Rate Update
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_rates') {
+    $newTheory    = (float)($_POST['theory_rate']    ?? 800.00);
+    $newPractical = (float)($_POST['practical_rate'] ?? 400.00);
+    if ($newTheory <= 0)    $newTheory    = 800.00;
+    if ($newPractical <= 0) $newPractical = 400.00;
+
+    $upd = $pdo->prepare("UPDATE faculty_members SET theory_rate = ?, practical_rate = ? WHERE id = ?");
+    $upd->execute([$newTheory, $newPractical, $id]);
+
+    setFlash('success', "Remuneration rates updated: Theory ₹{$newTheory}/hr, Practical ₹{$newPractical}/hr.");
+    header('Location: ' . BASE_URL . '/admin/faculty/view.php?id=' . $id);
+    exit;
+}
+
 // Assigned courses
 $cStmt = $pdo->prepare("
     SELECT c.* 
@@ -263,6 +278,26 @@ $active_nav = 'faculty-list';
                         <span style="color:#94a3b8;font-weight:500;">Aadhaar No:</span>
                         <span style="font-family:monospace;font-weight:700;color:#0f172a;"><?= htmlspecialchars($faculty['aadhaar_no'] ?: '—') ?></span>
                     </div>
+
+                    <div style="margin-top:18px;padding-top:16px;border-top:1px solid #f1f5f9;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                            <span style="font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;">Honorarium Rates</span>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('editRatesModal').style.display='flex';" style="padding:4px 10px;font-size:12px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                Edit Rates
+                            </button>
+                        </div>
+                        <div style="display:flex;gap:12px;">
+                            <div style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:8px 12px;">
+                                <div style="font-size:11px;color:#1e40af;font-weight:600;">Theory Class</div>
+                                <div style="font-size:16px;font-weight:800;color:#1e3a8a;">&#8377;<?= number_format($faculty['theory_rate'] ?? 800, 2) ?><span style="font-size:11px;font-weight:500;">/hr</span></div>
+                            </div>
+                            <div style="flex:1;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:8px 12px;">
+                                <div style="font-size:11px;color:#92400e;font-weight:600;">Practical / Lab</div>
+                                <div style="font-size:16px;font-weight:800;color:#b45309;">&#8377;<?= number_format($faculty['practical_rate'] ?? 400, 2) ?><span style="font-size:11px;font-weight:500;">/hr</span></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -460,6 +495,49 @@ $active_nav = 'faculty-list';
                 </button>
             </form>
         </div>
+    </div>
+</div>
+
+<!-- Edit Remuneration Rates Modal -->
+<div id="editRatesModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,0.6);backdrop-filter:blur(5px);align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:20px;padding:32px;max-width:440px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.22);animation:fadeUp .25s ease both;">
+        <div style="width:52px;height:52px;border-radius:14px;background:#eef2ff;border:2px solid #c7d2fe;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <h2 style="font-size:18px;font-weight:800;color:#0f172a;text-align:center;margin:0 0 6px;">Update Remuneration Rates</h2>
+        <p style="font-size:13px;color:#64748b;text-align:center;margin:0 0 20px;">
+            Set customized hourly honorarium rates for <strong><?= htmlspecialchars($faculty['name']) ?></strong>
+        </p>
+        <form method="POST" action="">
+            <input type="hidden" name="action" value="update_rates">
+            <div style="margin-bottom:16px;">
+                <label class="form-label">Theory Class Rate (&#8377; per hour)</label>
+                <div style="position:relative;">
+                    <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700;color:#64748b;">&#8377;</span>
+                    <input type="number" step="1" min="1" name="theory_rate" class="form-input"
+                           style="padding-left:30px;font-weight:700;"
+                           value="<?= htmlspecialchars((int)($faculty['theory_rate'] ?? 800)) ?>" required>
+                </div>
+            </div>
+            <div style="margin-bottom:24px;">
+                <label class="form-label">Practical / Lab Rate (&#8377; per hour)</label>
+                <div style="position:relative;">
+                    <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700;color:#64748b;">&#8377;</span>
+                    <input type="number" step="1" min="1" name="practical_rate" class="form-input"
+                           style="padding-left:30px;font-weight:700;"
+                           value="<?= htmlspecialchars((int)($faculty['practical_rate'] ?? 400)) ?>" required>
+                </div>
+            </div>
+            <div style="display:flex;gap:12px;">
+                <button type="button" onclick="document.getElementById('editRatesModal').style.display='none';"
+                    style="flex:1;padding:11px;border-radius:10px;border:1.5px solid #e2e8f0;background:#fff;font-size:13.5px;font-weight:600;color:#475569;cursor:pointer;">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" style="flex:1;justify-content:center;padding:11px;">
+                    Save Rates
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 

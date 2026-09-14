@@ -118,19 +118,32 @@ $active_nav = 'courses-list';
             </div>
             <div style="padding:28px;">
                 <form method="POST" action="">
+                    <?php
+                    $curSem = $_POST['semester'] ?? ($course['semester'] ?? '1st Semester');
+                    $semList = [
+                        '1st Semester', '2nd Semester', '3rd Semester',
+                        '4th Semester', '5th Semester', '6th Semester',
+                        '7th Semester', '8th Semester', '9th Semester'
+                    ];
+                    ?>
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label">Program / Degree *</label>
                             <input type="text" name="program" class="form-input"
-                                placeholder="e.g. M.Sc, MBA, M.Tech AI&DS, B.Sc"
+                                placeholder="e.g. M.Tech AI&DS"
                                 value="<?= htmlspecialchars($_POST['program'] ?? $course['program']) ?>" required>
-                            <div style="font-size:12px;color:#94a3b8;margin-top:5px;">e.g. MBA, M.Sc, M.Tech AI&amp;DS</div>
+                            <div style="font-size:12px;color:#94a3b8;margin-top:5px;">Program: <strong>M.Tech AI&amp;DS</strong></div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Semester</label>
-                            <input type="text" name="semester" class="form-input"
-                                placeholder="e.g. 1st Semester, 3rd Semester"
-                                value="<?= htmlspecialchars($_POST['semester'] ?? ($course['semester'] ?? '')) ?>">
+                            <label class="form-label">Semester *</label>
+                            <select name="semester" class="form-select" required>
+                                <?php foreach ($semList as $s): ?>
+                                    <option value="<?= htmlspecialchars($s) ?>" <?= $curSem === $s ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($s) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div style="font-size:12px;color:#94a3b8;margin-top:5px;">Choose which semester this subject is taught in</div>
                         </div>
                     </div>
 

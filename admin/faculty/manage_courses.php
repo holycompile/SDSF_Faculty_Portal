@@ -191,9 +191,9 @@ $active_nav = 'faculty-list';
                         <div style="font-size:12px;color:#64748b;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                             <span style="font-family:monospace;background:#f1f5f9;padding:2px 7px;border-radius:5px;"><?= htmlspecialchars($ac['course_code'] ?? '—') ?></span>
                             <?php if ($ac['class_type'] === 'T'): ?>
-                                <span class="badge badge-blue">Theory — &#8377;800/hr</span>
+                                <span class="badge badge-blue">Theory — &#8377;<?= number_format($faculty['theory_rate'] ?? 800, 0) ?>/hr</span>
                             <?php else: ?>
-                                <span class="badge badge-amber">Practical — &#8377;400/hr</span>
+                                <span class="badge badge-amber">Practical — &#8377;<?= number_format($faculty['practical_rate'] ?? 400, 0) ?>/hr</span>
                             <?php endif; ?>
                             <span style="color:#cbd5e1;">Since: <?= date('d M Y', strtotime($ac['assigned_at'])) ?></span>
                         </div>
@@ -247,8 +247,8 @@ $active_nav = 'faculty-list';
                                     <div class="course-meta">
                                         <?= $course['course_code'] ? '<span style="font-family:monospace;">' . htmlspecialchars($course['course_code']) . '</span> &middot; ' : '' ?>
                                         <?= $course['class_type'] === 'T'
-                                            ? '<span style="color:#2563eb;font-weight:600;">Theory</span> &#8377;800/hr'
-                                            : '<span style="color:#b45309;font-weight:600;">Practical</span> &#8377;400/hr' ?>
+                                            ? '<span style="color:#2563eb;font-weight:600;">Theory</span> &#8377;' . number_format($faculty['theory_rate'] ?? 800, 0) . '/hr'
+                                            : '<span style="color:#b45309;font-weight:600;">Practical</span> &#8377;' . number_format($faculty['practical_rate'] ?? 400, 0) . '/hr' ?>
                                     </div>
                                 </div>
                             </label>

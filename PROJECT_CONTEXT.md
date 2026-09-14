@@ -16,17 +16,18 @@ PDO with ERRMODE_EXCEPTION and FETCH_ASSOC.
 
 ## Tables (DO NOT touch the admin table)
 1. admin (username, pass) - EXISTING, plain text passwords
-2. faculty_members (id, faculty_enrollment_no UNIQUE, name, email, phone, address, qualification, department, pan_no, account_no, bank_name, ifsc_code, aadhaar_no, status, created_at)
-3. courses (id, program, semester, subject_name, course_code, class_type ENUM T/P, created_at)
+2. faculty_members (id, faculty_enrollment_no UNIQUE, name, email, phone, address, qualification, department, pan_no, account_no, bank_name, ifsc_code, aadhaar_no, theory_rate, practical_rate, status, created_at)
+3. courses (id, program, semester, subject_name, course_code, class_type ENUM T/P, created_at) — Currently M.Tech AI&DS across 9 Semesters
 4. faculty_course_assignments (id, faculty_id FK, course_id FK, assigned_at) UNIQUE(faculty_id, course_id)
 5. lecture_entries (id, faculty_id FK, course_id FK, lecture_date, hours, rate_per_hour, amount, created_at)
 6. payment_records (id, faculty_id FK, month, year, total_hours, total_amount, date_of_submission, generated_at)
+7. monthly_report_submissions (id, faculty_id FK, month, year, submission_date, attendance_register_page, cheque_no, theory_hours, practical_hours, total_hours, theory_rate, practical_rate, total_amount, status)
 
 ## Business Rules
-THEORY_RATE = 800 Rs/hr (class_type = T)
-PRACTICAL_RATE = 400 Rs/hr (class_type = P)
+THEORY_RATE = default 800 Rs/hr (class_type = T, customizable per faculty)
+PRACTICAL_RATE = default 400 Rs/hr (class_type = P, customizable per faculty)
 MAX_MONTHLY = 30000 Rs (warning only)
-Amount = hours x rate_per_hour (calculated in PHP BEFORE insert, never user-entered)
+Amount = hours x faculty_rate (calculated in PHP BEFORE insert, never user-entered)
 
 ## Authentication
 Admin: username+pass -> $_SESSION[admin_username], guard: requireAdmin()

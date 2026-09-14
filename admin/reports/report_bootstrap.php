@@ -150,8 +150,8 @@ foreach ($allLectures as $lec) {
 }
 
 $grandTotalHours = $totalTheoryHours + $totalPracticalHours + $totalTutorialHours;
-$theoryRate = 800.00;
-$practicalRate = 400.00;
+$theoryRate = !empty($faculty['theory_rate']) ? (float)$faculty['theory_rate'] : 800.00;
+$practicalRate = !empty($faculty['practical_rate']) ? (float)$faculty['practical_rate'] : 400.00;
 $theoryAmount = $totalTheoryHours * $theoryRate;
 $practicalAmount = $totalPracticalHours * $practicalRate;
 $grandTotalAmount = $theoryAmount + $practicalAmount;

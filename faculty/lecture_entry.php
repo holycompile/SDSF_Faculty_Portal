@@ -8,6 +8,14 @@ requireFaculty();
 
 $facultyId = (int)$_SESSION['faculty_id'];
 
+// Get faculty details including custom remuneration rates
+$fStmt = $pdo->prepare("SELECT * FROM faculty_members WHERE id = ?");
+$fStmt->execute([$facultyId]);
+$facultyMember = $fStmt->fetch();
+
+$facTheoryRate    = (float)($facultyMember['theory_rate'] ?? 800.00);
+$facPracticalRate = (float)($facultyMember['practical_rate'] ?? 400.00);
+
 // Get assigned courses
 $stmt = $pdo->prepare("
     SELECT c.* 
@@ -50,8 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
         try {
-            // Business rules for rates: Theory = 800, Practical = 400
-            $rate = ($matchedCourse['class_type'] === 'T') ? THEORY_RATE : PRACTICAL_RATE;
+            // Apply this teacher's specific configured rates
+            $rate = ($matchedCourse['class_type'] === 'T') ? $facTheoryRate : $facPracticalRate;
             $amount = round($hours * $rate, 2);
 
             $ins = $pdo->prepare("
@@ -156,8 +164,10 @@ $active_nav = 'lecture_entry';
                         <select name="course_id" id="course_id" class="form-select" required onchange="calculateRemuneration()">
                             <option value="">-- Choose Assigned Course --</option>
                             <?php foreach ($courses as $c): 
-                                $rateVal = ($c['class_type'] === 'T') ? 800 : 400;
-                                $typeTxt = ($c['class_type'] === 'T') ? 'Theory (Rs. 800/hr)' : 'Practical (Rs. 400/hr)';
+                                $rateVal = ($c['class_type'] === 'T') ? $facTheoryRate : $facPracticalRate;
+                                $typeTxt = ($c['class_type'] === 'T') 
+                                    ? 'Theory (Rs. ' . number_format($facTheoryRate, 0) . '/hr)' 
+                                    : 'Practical (Rs. ' . number_format($facPracticalRate, 0) . '/hr)';
                                 $selected = ($preselectedCourseId == $c['id']) ? 'selected' : '';
                             ?>
                                 <option value="<?= $c['id'] ?>" 

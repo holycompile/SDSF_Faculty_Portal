@@ -27,10 +27,14 @@ function requireFaculty() {
     }
 }
 
-function getRate(string $classType): int {
-    return ($classType === 'T') ? THEORY_RATE : PRACTICAL_RATE;
+function getRate(string $classType, ?float $customTheory = null, ?float $customPractical = null): float {
+    if ($classType === 'T') {
+        return ($customTheory !== null && $customTheory > 0) ? $customTheory : (float)THEORY_RATE;
+    } else {
+        return ($customPractical !== null && $customPractical > 0) ? $customPractical : (float)PRACTICAL_RATE;
+    }
 }
 
-function calcAmount(float $hours, string $classType): float {
-    return $hours * getRate($classType);
+function calcAmount(float $hours, string $classType, ?float $customTheory = null, ?float $customPractical = null): float {
+    return $hours * getRate($classType, $customTheory, $customPractical);
 }

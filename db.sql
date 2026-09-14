@@ -28,6 +28,8 @@ CREATE TABLE faculty_members (
   bank_name             VARCHAR(100),
   ifsc_code             VARCHAR(20),
   aadhaar_no            VARCHAR(20),
+  theory_rate           DECIMAL(8,2) NOT NULL DEFAULT 800.00 COMMENT 'Per theory class rate in Rs/hr',
+  practical_rate        DECIMAL(8,2) NOT NULL DEFAULT 400.00 COMMENT 'Per practical class rate in Rs/hr',
   password              VARCHAR(255) NULL,
   is_password_changed   TINYINT DEFAULT 0,
   status                ENUM('active','inactive') DEFAULT 'active',
@@ -128,16 +130,42 @@ CREATE TABLE IF NOT EXISTS password_reset_otps (
   INDEX idx_user_otp (user_type, identifier, otp, is_used)
 );
 
--- ── SEED DATA: Sample Courses ────────────────────────────────
+-- ── SEED DATA: M.Tech AI&DS 9-Semester Courses ───────────────
 INSERT INTO courses (program, semester, subject_name, course_code, class_type) VALUES
-('M.Sc',          '1st Semester', 'ADMS',                          'ADMS-101',   'T'),
-('MBA',           '1st Semester', 'Business Analytics',             'MBA-BA-201', 'P'),
-('M.Tech AI&DS',  '1st Semester', 'DAA',                           'DAA-301',    'T'),
-('M.Tech AI&DS',  '3rd Semester', 'DAA (Theory)',                  'DAA-302T',   'T'),
-('M.Tech AI&DS',  '3rd Semester', 'DAA (Practical)',               'DAA-302P',   'P'),
-('MBA(MS)',        '1st Semester', 'Quantitative Techniques for Business', 'FT-110A', 'T'),
-('M.Tech AI&DS',  '2nd Semester', 'Machine Learning',              'ML-401',     'T'),
-('B.Sc',          '1st Semester', 'Python Programming',            'PY-101',     'P');
+-- 1st Semester
+('M.Tech AI&DS', '1st Semester', 'Advanced Data Structures & Algorithms', 'MT-101', 'T'),
+('M.Tech AI&DS', '1st Semester', 'Mathematical Foundations of Data Science', 'MT-102', 'T'),
+('M.Tech AI&DS', '1st Semester', 'Python Programming for AI Lab', 'MT-103P', 'P'),
+-- 2nd Semester
+('M.Tech AI&DS', '2nd Semester', 'Machine Learning Techniques', 'MT-201', 'T'),
+('M.Tech AI&DS', '2nd Semester', 'Advanced Database Management Systems', 'MT-202', 'T'),
+('M.Tech AI&DS', '2nd Semester', 'Machine Learning Lab', 'MT-203P', 'P'),
+-- 3rd Semester
+('M.Tech AI&DS', '3rd Semester', 'Deep Learning Architectures', 'MT-301', 'T'),
+('M.Tech AI&DS', '3rd Semester', 'Natural Language Processing', 'MT-302', 'T'),
+('M.Tech AI&DS', '3rd Semester', 'Deep Learning & NLP Lab', 'MT-303P', 'P'),
+-- 4th Semester
+('M.Tech AI&DS', '4th Semester', 'Big Data Analytics & Engineering', 'MT-401', 'T'),
+('M.Tech AI&DS', '4th Semester', 'Computer Vision', 'MT-402', 'T'),
+('M.Tech AI&DS', '4th Semester', 'Big Data Analytics Lab', 'MT-403P', 'P'),
+-- 5th Semester
+('M.Tech AI&DS', '5th Semester', 'Reinforcement Learning & Optimization', 'MT-501', 'T'),
+('M.Tech AI&DS', '5th Semester', 'Cloud Computing & MLOps', 'MT-502', 'T'),
+('M.Tech AI&DS', '5th Semester', 'Cloud AI Deployment Lab', 'MT-503P', 'P'),
+-- 6th Semester
+('M.Tech AI&DS', '6th Semester', 'AI in IoT & Healthcare', 'MT-601', 'T'),
+('M.Tech AI&DS', '6th Semester', 'Research Methodology & Ethics', 'MT-602', 'T'),
+('M.Tech AI&DS', '6th Semester', 'Applied AI Capstone Lab', 'MT-603P', 'P'),
+-- 7th Semester
+('M.Tech AI&DS', '7th Semester', 'Data Mining & Knowledge Discovery', 'MT-701', 'T'),
+('M.Tech AI&DS', '7th Semester', 'Information Retrieval', 'MT-702', 'T'),
+('M.Tech AI&DS', '7th Semester', 'Minor Project & Seminar', 'MT-703P', 'P'),
+-- 8th Semester
+('M.Tech AI&DS', '8th Semester', 'Industrial Training & Research Seminar', 'MT-801', 'T'),
+('M.Tech AI&DS', '8th Semester', 'Major Project Phase-I Lab', 'MT-802P', 'P'),
+-- 9th Semester
+('M.Tech AI&DS', '9th Semester', 'Comprehensive Viva & Defense', 'MT-901', 'T'),
+('M.Tech AI&DS', '9th Semester', 'Major Project Phase-II / Dissertation', 'MT-902P', 'P');
 
 SELECT 'Schema created successfully' AS status;
 SELECT COUNT(*) AS total_courses FROM courses;
