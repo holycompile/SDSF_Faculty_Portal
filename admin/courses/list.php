@@ -618,7 +618,7 @@ window.addEventListener('click', function(e) {
                 <label class="form-label" for="tagModalInput">Year Tag (e.g. 2022-2027, 2025-2027)</label>
                 <input type="text" id="tagModalInput" class="form-input" placeholder="e.g. 2022-2027" required style="font-size:15px;font-weight:600;">
                 <div style="font-size:12px;color:#64748b;margin-top:6px;">
-                    This year tag will appear directly beside this semester on curriculum, student rosters, and reports.
+                    This year tag will appear directly beside this semester on curriculum and reports.
                 </div>
             </div>
 

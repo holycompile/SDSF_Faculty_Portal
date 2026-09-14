@@ -57,14 +57,6 @@ try {
     ");
     $cStmt->execute([$yearTag, $programId, $semNum, $semName]);
 
-    // 3. Synchronize batch_year in students enrolled in this semester
-    $sStmt = $pdo->prepare("
-        UPDATE students 
-        SET batch_year = ? 
-        WHERE program_id = ? AND (current_semester = ? OR current_semester = ?)
-    ");
-    $sStmt->execute([$yearTag, $programId, $semName, (string)$semNum]);
-
     if ($isAjax) {
         header('Content-Type: application/json');
         echo json_encode([
