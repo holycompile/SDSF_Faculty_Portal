@@ -364,7 +364,6 @@ $active_nav = 'courses-list';
                                 <th>Subject / Paper Name</th>
                                 <th>Course Code / ID</th>
                                 <th style="font-weight:800;font-size:13px;letter-spacing:0.3px;">Credits (L T P)</th>
-                                <th>Base Honorarium</th>
                                 <th>Faculty Assigned</th>
                                 <th style="text-align:right;">Actions</th>
                             </tr>
@@ -390,15 +389,6 @@ $active_nav = 'courses-list';
                                     <span style="font-family:'Segoe UI Mono', SFMono-Regular, Consolas, monospace;font-size:14px;font-weight:800;color:#0f172a;letter-spacing:0.5px;background:#f8fafc;padding:4px 10px;border-radius:7px;border:1.5px solid #cbd5e1;display:inline-block;">
                                         <?= htmlspecialchars($ltpText) ?>
                                     </span>
-                                </td>
-                                <td>
-                                    <?php if (($c['practical_hours'] ?? 0) > 0 && ($c['lecture_hours'] ?? 0) > 0): ?>
-                                        <span style="font-weight:700;color:#047857;font-size:13px;">&#8377;800 (T) / &#8377;400 (P)</span>
-                                    <?php elseif (($c['practical_hours'] ?? 0) > 0): ?>
-                                        <span style="font-weight:700;color:#047857;font-size:13px;">&#8377;400 / hr (P)</span>
-                                    <?php else: ?>
-                                        <span style="font-weight:700;color:#047857;font-size:13px;">&#8377;800 / hr (T)</span>
-                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <span class="badge <?= $c['assigned_count'] > 0 ? 'badge-green' : 'badge-gray' ?>">
