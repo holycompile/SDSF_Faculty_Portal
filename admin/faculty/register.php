@@ -7,16 +7,24 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 requireAdmin();
 
 $errors = [];
-$allCourses = $pdo->query("SELECT * FROM courses ORDER BY program, semester, subject_name")->fetchAll();
+$allCourses = $pdo->query("SELECT * FROM courses ORDER BY program_id ASC, program ASC, semester_number ASC, semester ASC, subject_name ASC")->fetchAll();
 
-// Group courses by semester for structured assignment
-$coursesBySemester = [];
+// Group courses by program (with batch year) then by semester
+$coursesByProgram = [];
 foreach ($allCourses as $c) {
+    $pKey = trim($c['program'] ?? 'General');
+    $bYear = trim($c['batch_year'] ?? '');
     $sem = trim($c['semester'] ?? 'Other');
-    if (!isset($coursesBySemester[$sem])) {
-        $coursesBySemester[$sem] = [];
+    if ($bYear) {
+        $sem .= " ({$bYear})";
     }
-    $coursesBySemester[$sem][] = $c;
+    if (!isset($coursesByProgram[$pKey])) {
+        $coursesByProgram[$pKey] = [];
+    }
+    if (!isset($coursesByProgram[$pKey][$sem])) {
+        $coursesByProgram[$pKey][$sem] = [];
+    }
+    $coursesByProgram[$pKey][$sem][] = $c;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -278,32 +286,42 @@ $active_nav = 'faculty-register';
                     No courses available. <a href="<?= BASE_URL ?>/admin/courses/add.php" style="color:#4f46e5;">Add courses first.</a>
                 </div>
                 <?php else: ?>
-                    <?php foreach ($coursesBySemester as $semTitle => $sCourses): ?>
-                        <div class="sem-block-header">
-                            <span><?= htmlspecialchars($semTitle) ?> &bull; M.Tech AI&amp;DS</span>
-                            <span style="font-size:11.5px;color:#64748b;font-weight:500;"><?= count($sCourses) ?> subject<?= count($sCourses) === 1 ? '' : 's' ?></span>
+                    <?php foreach ($coursesByProgram as $progTitle => $semestersList): ?>
+                        <div style="background:linear-gradient(135deg,#eef2ff 0%,#f8fafc 100%);border:1.5px solid #c7d2fe;border-radius:12px;padding:12px 18px;margin:24px 0 12px;display:flex;align-items:center;justify-content:space-between;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <span style="font-size:16px;">🎓</span>
+                                <span style="font-size:14.5px;font-weight:800;color:#1e293b;"><?= htmlspecialchars($progTitle) ?></span>
+                            </div>
+                            <span class="badge badge-blue"><?= array_sum(array_map('count', $semestersList)) ?> subjects</span>
                         </div>
-                        <div class="course-grid" style="margin-bottom:16px;">
-                            <?php foreach ($sCourses as $course): ?>
-                            <label class="course-item">
-                                <input type="checkbox" name="course_ids[]" value="<?= $course['id'] ?>"
-                                    <?= in_array($course['id'], $_POST['course_ids'] ?? []) ? 'checked' : '' ?>
-                                    onchange="updateCount()">
-                                <div style="flex:1;">
-                                    <div class="course-prog"><?= htmlspecialchars($course['program']) ?> &bull; <?= htmlspecialchars($course['semester'] ?? '') ?></div>
-                                    <div class="course-sub"><?= htmlspecialchars($course['subject_name']) ?></div>
-                                    <div class="course-meta">
-                                        <?= $course['course_code'] ? '<span style="font-family:monospace;font-weight:600;">' . htmlspecialchars($course['course_code']) . '</span> &bull; ' : '' ?>
-                                        <?php if ($course['class_type'] === 'T'): ?>
-                                            <span style="color:#2563eb;font-weight:600;">Theory Class</span> &bull; <span class="rate-badge-theory">&#8377;800/hr</span>
-                                        <?php else: ?>
-                                            <span style="color:#b45309;font-weight:600;">Practical / Lab</span> &bull; <span class="rate-badge-practical">&#8377;400/hr</span>
-                                        <?php endif; ?>
+
+                        <?php foreach ($semestersList as $semTitle => $sCourses): ?>
+                            <div class="sem-block-header">
+                                <span><?= htmlspecialchars($semTitle) ?></span>
+                                <span style="font-size:11.5px;color:#64748b;font-weight:500;"><?= count($sCourses) ?> subject<?= count($sCourses) === 1 ? '' : 's' ?></span>
+                            </div>
+                            <div class="course-grid" style="margin-bottom:16px;">
+                                <?php foreach ($sCourses as $course): ?>
+                                <label class="course-item">
+                                    <input type="checkbox" name="course_ids[]" value="<?= $course['id'] ?>"
+                                        <?= in_array($course['id'], $_POST['course_ids'] ?? []) ? 'checked' : '' ?>
+                                        onchange="updateCount()">
+                                    <div style="flex:1;">
+                                        <div class="course-prog"><?= htmlspecialchars($course['program']) ?> &bull; <?= htmlspecialchars($course['semester'] ?? '') ?></div>
+                                        <div class="course-sub"><?= htmlspecialchars($course['subject_name']) ?></div>
+                                        <div class="course-meta">
+                                            <?= $course['course_code'] ? '<span style="font-family:monospace;font-weight:600;">' . htmlspecialchars($course['course_code']) . '</span> &bull; ' : '' ?>
+                                            <?php if ($course['class_type'] === 'T'): ?>
+                                                <span style="color:#2563eb;font-weight:600;">Theory Class</span> &bull; <span class="rate-badge-theory">&#8377;800/hr</span>
+                                            <?php else: ?>
+                                                <span style="color:#b45309;font-weight:600;">Practical / Lab</span> &bull; <span class="rate-badge-practical">&#8377;400/hr</span>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
-                                </div>
-                            </label>
-                            <?php endforeach; ?>
-                        </div>
+                                </label>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>

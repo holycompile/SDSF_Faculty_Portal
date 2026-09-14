@@ -19,7 +19,7 @@ $filterMonth  = (int)($_GET['month'] ?? 0);
 $filterYear   = (int)($_GET['year'] ?? 0);
 
 $query = "
-    SELECT le.*, c.subject_name, c.course_code, c.program, c.semester, c.class_type
+    SELECT le.*, c.subject_name, c.course_code, c.program, c.semester, c.class_type, c.ltp_pattern, c.credits, c.lecture_hours, c.tutorial_hours, c.practical_hours
     FROM lecture_entries le
     JOIN courses c ON c.id = le.course_id
     WHERE le.faculty_id = ?
@@ -281,9 +281,9 @@ $totalCount  = count($lectures);
                     <thead>
                         <tr>
                             <th>Date</th>
-                            <th>Subject & Code</th>
-                            <th>Program & Sem</th>
-                            <th>Class Type</th>
+                            <th>Subject &amp; Code</th>
+                            <th>Program &amp; Sem</th>
+                            <th>Credits (L T P)</th>
                             <th>Duration</th>
                             <th>Hourly Rate</th>
                             <th>Amount</th>
@@ -301,11 +301,14 @@ $totalCount  = count($lectures);
                             </td>
                             <td><?= htmlspecialchars($l['program']) ?> &bull; Sem <?= htmlspecialchars($l['semester'] ?? '') ?></td>
                             <td>
-                                <?php if ($l['class_type'] === 'T'): ?>
-                                    <span class="badge-theory">Theory (T)</span>
-                                <?php else: ?>
-                                    <span class="badge-practical">Practical (P)</span>
-                                <?php endif; ?>
+                                <?php 
+                                    $ltpText = !empty($l['ltp_pattern']) 
+                                        ? $l['ltp_pattern'] 
+                                        : (($l['credits'] ?? 4) . '(' . ($l['lecture_hours'] ?? 3) . '-' . ($l['tutorial_hours'] ?? 0) . '-' . ($l['practical_hours'] ?? 0) . ')');
+                                ?>
+                                <span style="font-family:'Segoe UI Mono', SFMono-Regular, Consolas, monospace;font-size:13px;font-weight:800;color:#0f172a;background:#f8fafc;padding:3px 9px;border-radius:6px;border:1.5px solid #cbd5e1;display:inline-block;">
+                                    <?= htmlspecialchars($ltpText) ?>
+                                </span>
                             </td>
                             <td style="font-weight:600;color:#0f172a;"><?= (float)$l['hours'] ?> hrs</td>
                             <td style="color:#64748b;">&#8377;<?= number_format((float)$l['rate_per_hour'], 0) ?>/hr</td>

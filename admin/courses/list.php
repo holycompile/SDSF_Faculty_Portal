@@ -8,30 +8,57 @@ requireAdmin();
 
 $flash = getFlash();
 
-// Fetch all courses with assignment and lecture counts
-$allCourses = $pdo->query("
+// Fetch all programs
+$programs = $pdo->query("SELECT * FROM academic_programs ORDER BY id ASC")->fetchAll();
+if (empty($programs)) {
+    // Safety fallback
+    $selectedProgram = ['id' => 0, 'program_name' => 'M.Tech AI&DS', 'batch_year' => '2022-2027', 'total_semesters' => 10];
+} else {
+    // Determine active program
+    $reqProgName = trim($_GET['program'] ?? '');
+    $selectedProgram = $programs[0]; // default
+    foreach ($programs as $p) {
+        if ($reqProgName && (strcasecmp($p['program_name'], $reqProgName) === 0 || (int)($_GET['program_id'] ?? 0) === (int)$p['id'])) {
+            $selectedProgram = $p;
+            break;
+        }
+    }
+}
+
+$progId   = (int)$selectedProgram['id'];
+$progName = $selectedProgram['program_name'];
+$batchYear= $selectedProgram['batch_year'];
+$totalSem = (int)$selectedProgram['total_semesters'];
+
+// Fetch courses for selected program
+$stmt = $pdo->prepare("
     SELECT c.*, 
            COUNT(DISTINCT fca.id) AS assigned_count,
            COUNT(DISTINCT le.id)  AS lecture_count
     FROM courses c 
     LEFT JOIN faculty_course_assignments fca ON fca.course_id = c.id 
     LEFT JOIN lecture_entries le ON le.course_id = c.id
+    WHERE (c.program_id = ? OR c.program = ?)
     GROUP BY c.id 
-    ORDER BY c.program, c.semester, c.subject_name
-")->fetchAll();
+    ORDER BY c.semester_number ASC, c.semester ASC, c.subject_name ASC
+");
+$stmt->execute([$progId, $progName]);
+$courses = $stmt->fetchAll();
 
-// Pre-defined list of the 9 semesters
-$semesters = [
-    '1st Semester',
-    '2nd Semester',
-    '3rd Semester',
-    '4th Semester',
-    '5th Semester',
-    '6th Semester',
-    '7th Semester',
-    '8th Semester',
-    '9th Semester'
-];
+// Build semesters array according to total_semesters
+$semesters = [];
+for ($i = 1; $i <= $totalSem; $i++) {
+    $suffix = 'th';
+    if ($i === 1) $suffix = 'st';
+    elseif ($i === 2) $suffix = 'nd';
+    elseif ($i === 3) $suffix = 'rd';
+    $semesters[] = "{$i}{$suffix} Semester";
+}
+
+// Fetch semester year tags for this program
+$tagStmt = $pdo->prepare("SELECT semester_number, year_tag FROM semester_tags WHERE program_id = ?");
+$tagStmt->execute([$progId]);
+$semesterYearTags = $tagStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
 // Group courses by semester
 $coursesBySemester = [];
@@ -40,7 +67,7 @@ foreach ($semesters as $sem) {
 }
 $otherCourses = [];
 
-foreach ($allCourses as $c) {
+foreach ($courses as $c) {
     $sem = trim($c['semester'] ?? '');
     if (isset($coursesBySemester[$sem])) {
         $coursesBySemester[$sem][] = $c;
@@ -49,7 +76,7 @@ foreach ($allCourses as $c) {
     }
 }
 
-$totalCoursesCount = count($allCourses);
+$totalCoursesCount = count($courses);
 $active_nav = 'courses-list';
 ?>
 <!DOCTYPE html>
@@ -57,17 +84,94 @@ $active_nav = 'courses-list';
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Semester & Course Management — SDSF Admin</title>
+<title><?= htmlspecialchars($progName) ?> — SDSF Curriculum</title>
 <link rel="stylesheet" href="<?= BASE_URL ?>/tailwind/output.css">
 <?php require_once ROOT . '/includes/admin_sidebar.php'; ?>
 <style>
+.sem-year-badge {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4338ca;
+    background: #eef2ff;
+    padding: 3px 9px;
+    border-radius: 6px;
+    border: 1px solid #c7d2fe;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all .2s;
+}
+.btn-edit-tag {
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all .15s ease;
+}
+.btn-edit-tag:hover {
+    background: #e0e7ff;
+    color: #4338ca;
+    border-color: #a5b4fc;
+}
+.prog-pills-bar {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    margin-bottom: 22px;
+    border-bottom: 1.5px solid #e2e8f0;
+}
+.prog-pill {
+    padding: 10px 18px;
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    background: #ffffff;
+    color: #334155;
+    font-size: 13.5px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all .2s ease;
+}
+.prog-pill:hover {
+    border-color: #c7d2fe;
+    color: #4f46e5;
+    background: #f8fafc;
+}
+.prog-pill.active {
+    background: #4f46e5;
+    color: #ffffff;
+    border-color: #4f46e5;
+    box-shadow: 0 6px 18px rgba(79,70,229,0.28);
+}
+.prog-pill .year-tag {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #475569;
+}
+.prog-pill.active .year-tag {
+    background: rgba(255,255,255,0.25);
+    color: #ffffff;
+}
+
 .sem-tabs {
     display: flex;
     gap: 8px;
     overflow-x: auto;
     padding-bottom: 8px;
     margin-bottom: 24px;
-    border-bottom: 1px solid #e2e8f0;
 }
 .sem-tab-btn {
     padding: 8px 16px;
@@ -90,10 +194,9 @@ $active_nav = 'courses-list';
     background: #f8fafc;
 }
 .sem-tab-btn.active {
-    background: #4f46e5;
+    background: #0f172a;
     color: #ffffff;
-    border-color: #4f46e5;
-    box-shadow: 0 4px 14px rgba(79,70,229,0.25);
+    border-color: #0f172a;
 }
 .sem-tab-count {
     font-size: 11px;
@@ -105,9 +208,7 @@ $active_nav = 'courses-list';
     background: rgba(255,255,255,0.25);
     color: #ffffff;
 }
-.sem-section {
-    margin-bottom: 28px;
-}
+.sem-section { margin-bottom: 28px; }
 .sem-header {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -120,14 +221,9 @@ $active_nav = 'courses-list';
     gap: 16px;
     flex-wrap: wrap;
 }
-.sem-title-box {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
 .sem-badge {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     border-radius: 10px;
     background: linear-gradient(135deg, #4f46e5, #6366f1);
     color: #fff;
@@ -135,8 +231,7 @@ $active_nav = 'courses-list';
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
-    box-shadow: 0 4px 10px rgba(79,70,229,0.25);
+    font-size: 14px;
 }
 </style>
 </head>
@@ -145,12 +240,16 @@ $active_nav = 'courses-list';
     <div class="tb-left">
         <a href="<?= BASE_URL ?>/admin/dashboard.php" style="color:#94a3b8;text-decoration:none;">Dashboard</a>
         <span class="tb-sep">/</span>
-        <span class="tb-crumb">M.Tech AI&amp;DS Courses</span>
+        <span class="tb-crumb"><?= htmlspecialchars($progName) ?></span>
     </div>
-    <div class="tb-right">
-        <a href="<?= BASE_URL ?>/admin/courses/add.php?program=M.Tech+AI%26DS" class="btn btn-primary btn-sm">
+    <div class="tb-right" style="display:flex;gap:10px;align-items:center;">
+        <a href="<?= BASE_URL ?>/admin/courses/programs.php" class="btn btn-outline btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            Manage Programs &amp; Batches
+        </a>
+        <a href="<?= BASE_URL ?>/admin/courses/add.php?program=<?= urlencode($progName) ?>" class="btn btn-primary btn-sm">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add New Subject
+            + Add New Subject
         </a>
     </div>
 </header>
@@ -159,12 +258,11 @@ $active_nav = 'courses-list';
     <div class="page-header fade-up">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
             <div>
-                <h1>M.Tech AI&amp;DS — Semester &amp; Course Management</h1>
-                <p>Manage curriculum subjects, theory/practical classifications, and faculty assignments across all 9 Semesters (<?= $totalCoursesCount ?> total subjects)</p>
+                <h1><?= htmlspecialchars($progName) ?></h1>
+                <p>Curriculum structure &bull; <?= $totalSem ?> Semesters &bull; <?= $totalCoursesCount ?> configured subjects</p>
             </div>
-            <div style="display:flex;gap:10px;">
-                <span class="badge badge-blue" style="font-size:13px;padding:6px 14px;">Program: M.Tech AI&amp;DS</span>
-                <span class="badge badge-green" style="font-size:13px;padding:6px 14px;">9 Semesters Active</span>
+            <div style="display:flex;gap:10px;align-items:center;">
+                <span class="badge badge-green" style="font-size:13px;padding:6px 14px;"><?= $totalSem ?> Semesters</span>
             </div>
         </div>
     </div>
@@ -173,7 +271,18 @@ $active_nav = 'courses-list';
     <div class="alert alert-<?= $flash['type'] ?> fade-up"><?= htmlspecialchars($flash['msg']) ?></div>
     <?php endif; ?>
 
-    <!-- Semester Navigation Tabs -->
+    <!-- Program / Degree Selector Bar -->
+    <div class="prog-pills-bar fade-up">
+        <?php foreach ($programs as $prg): ?>
+            <?php $isActive = ($prg['id'] == $progId); ?>
+            <a href="<?= BASE_URL ?>/admin/courses/list.php?program=<?= urlencode($prg['program_name']) ?>"
+               class="prog-pill <?= $isActive ? 'active' : '' ?>">
+                <span><?= htmlspecialchars($prg['program_name']) ?></span>
+            </a>
+        <?php endforeach; ?>
+    </div>
+
+    <!-- Semester Navigation Tabs for this Program -->
     <div class="sem-tabs fade-up" id="semesterNav">
         <button type="button" class="sem-tab-btn active" onclick="filterSemester('all', this)">
             <span>All Semesters</span>
@@ -192,28 +301,43 @@ $active_nav = 'courses-list';
     <div class="card fade-up" style="margin-bottom:20px;padding:12px 18px;">
         <div style="display:flex;align-items:center;gap:10px;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="courseSearch" placeholder="Search subjects by name or course code..."
+            <input type="text" id="courseSearch" placeholder="Search subjects in <?= htmlspecialchars($progName) ?> by name or course code..."
                    oninput="searchCourses()"
                    style="border:none;outline:none;font-size:14px;width:100%;background:transparent;color:#0f172a;">
         </div>
     </div>
 
-    <!-- Render Each of the 9 Semesters -->
+    <!-- Render Each Semester of this Program -->
     <?php foreach ($semesters as $idx => $semName): ?>
-        <?php $semCourses = $coursesBySemester[$semName]; ?>
-        <div class="sem-section fade-up" id="sem-<?= $idx + 1 ?>">
+        <?php 
+            $semCourses = $coursesBySemester[$semName]; 
+            $semNum = $idx + 1;
+            $semTag = $semesterYearTags[$semNum] ?? '';
+        ?>
+        <div class="sem-section fade-up" id="sem-<?= $semNum ?>">
             <div class="sem-header">
-                <div class="sem-title-box">
-                    <div class="sem-badge"><?= $idx + 1 ?></div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div class="sem-badge"><?= $semNum ?></div>
                     <div>
-                        <h2 style="font-size:16px;font-weight:800;color:#0f172a;margin:0;"><?= htmlspecialchars($semName) ?></h2>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <h2 style="font-size:16px;font-weight:800;color:#0f172a;margin:0;"><?= htmlspecialchars($semName) ?></h2>
+                            <span class="sem-year-badge" id="sem-tag-badge-<?= $semNum ?>">
+                                <?= !empty($semTag) ? htmlspecialchars($semTag) : 'No Tag Set' ?>
+                            </span>
+                            <button type="button" class="btn-edit-tag"
+                                    onclick="openEditTagModal(<?= $progId ?>, <?= $semNum ?>, '<?= htmlspecialchars(addslashes($semName)) ?>', '<?= htmlspecialchars(addslashes($semTag)) ?>')"
+                                    title="Edit Year Tag for this Semester">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                Edit Tag
+                            </button>
+                        </div>
                         <div style="font-size:12px;color:#64748b;margin-top:2px;">
-                            Program: <strong>M.Tech AI&amp;DS</strong> &bull; <?= count($semCourses) ?> subject<?= count($semCourses) === 1 ? '' : 's' ?> configured
+                            <?= count($semCourses) ?> subject<?= count($semCourses) === 1 ? '' : 's' ?> configured in this semester
                         </div>
                     </div>
                 </div>
-                <div>
-                    <a href="<?= BASE_URL ?>/admin/courses/add.php?program=M.Tech+AI%26DS&semester=<?= urlencode($semName) ?>" class="btn btn-outline btn-sm">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <a href="<?= BASE_URL ?>/admin/courses/add.php?program=<?= urlencode($progName) ?>&semester=<?= urlencode($semName) ?>" class="btn btn-outline btn-sm">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         + Add Subject to <?= htmlspecialchars($semName) ?>
                     </a>
@@ -226,7 +350,7 @@ $active_nav = 'courses-list';
                         <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 8px;display:block;opacity:.4"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
                         No subjects added to <?= htmlspecialchars($semName) ?> yet.
                         <div style="margin-top:8px;">
-                            <a href="<?= BASE_URL ?>/admin/courses/add.php?program=M.Tech+AI%26DS&semester=<?= urlencode($semName) ?>" style="color:#4f46e5;font-weight:600;font-size:13px;">
+                            <a href="<?= BASE_URL ?>/admin/courses/add.php?program=<?= urlencode($progName) ?>&semester=<?= urlencode($semName) ?>" style="color:#4f46e5;font-weight:600;font-size:13px;">
                                 + Add first subject to <?= htmlspecialchars($semName) ?>
                             </a>
                         </div>
@@ -237,8 +361,8 @@ $active_nav = 'courses-list';
                             <tr>
                                 <th style="width:45px;">#</th>
                                 <th>Subject / Paper Name</th>
-                                <th>Course Code</th>
-                                <th>Class Type</th>
+                                <th>Course Code / ID</th>
+                                <th style="font-weight:800;font-size:13px;letter-spacing:0.3px;">Credits (L T P)</th>
                                 <th>Base Honorarium</th>
                                 <th>Faculty Assigned</th>
                                 <th style="text-align:right;">Actions</th>
@@ -257,14 +381,23 @@ $active_nav = 'courses-list';
                                     </span>
                                 </td>
                                 <td>
-                                    <?php if ($c['class_type'] === 'T'): ?>
-                                        <span class="badge badge-blue">Theory Class</span>
-                                    <?php else: ?>
-                                        <span class="badge badge-amber">Practical / Lab</span>
-                                    <?php endif; ?>
+                                    <?php 
+                                        $ltpText = !empty($c['ltp_pattern']) 
+                                            ? $c['ltp_pattern'] 
+                                            : (($c['credits'] ?? 4) . '(' . ($c['lecture_hours'] ?? 3) . '-' . ($c['tutorial_hours'] ?? 0) . '-' . ($c['practical_hours'] ?? 0) . ')');
+                                    ?>
+                                    <span style="font-family:'Segoe UI Mono', SFMono-Regular, Consolas, monospace;font-size:14px;font-weight:800;color:#0f172a;letter-spacing:0.5px;background:#f8fafc;padding:4px 10px;border-radius:7px;border:1.5px solid #cbd5e1;display:inline-block;">
+                                        <?= htmlspecialchars($ltpText) ?>
+                                    </span>
                                 </td>
-                                <td style="font-weight:700;color:#047857;">
-                                    &#8377;<?= $c['class_type'] === 'T' ? 800 : 400 ?> / hr
+                                <td>
+                                    <?php if (($c['practical_hours'] ?? 0) > 0 && ($c['lecture_hours'] ?? 0) > 0): ?>
+                                        <span style="font-weight:700;color:#047857;font-size:13px;">&#8377;800 (T) / &#8377;400 (P)</span>
+                                    <?php elseif (($c['practical_hours'] ?? 0) > 0): ?>
+                                        <span style="font-weight:700;color:#047857;font-size:13px;">&#8377;400 / hr (P)</span>
+                                    <?php else: ?>
+                                        <span style="font-weight:700;color:#047857;font-size:13px;">&#8377;800 / hr (T)</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <span class="badge <?= $c['assigned_count'] > 0 ? 'badge-green' : 'badge-gray' ?>">
@@ -292,50 +425,6 @@ $active_nav = 'courses-list';
             </div>
         </div>
     <?php endforeach; ?>
-
-    <!-- Other courses if any -->
-    <?php if (!empty($otherCourses)): ?>
-        <div class="sem-section fade-up" id="sem-other">
-            <div class="sem-header">
-                <div class="sem-title-box">
-                    <div class="sem-badge" style="background:#64748b;">?</div>
-                    <div>
-                        <h2 style="font-size:16px;font-weight:800;color:#0f172a;margin:0;">Other / Elective Courses</h2>
-                        <div style="font-size:12px;color:#64748b;margin-top:2px;"><?= count($otherCourses) ?> course(s)</div>
-                    </div>
-                </div>
-            </div>
-            <div class="card" style="border-radius:0 0 16px 16px;border-top:none;">
-                <table class="dt course-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Subject</th>
-                            <th>Semester</th>
-                            <th>Code</th>
-                            <th>Type</th>
-                            <th style="text-align:right;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($otherCourses as $i => $c): ?>
-                        <tr class="course-row" data-name="<?= strtolower(htmlspecialchars($c['subject_name'] . ' ' . $c['course_code'])) ?>">
-                            <td><?= $i + 1 ?></td>
-                            <td><?= htmlspecialchars($c['subject_name']) ?></td>
-                            <td><?= htmlspecialchars($c['semester']) ?></td>
-                            <td><?= htmlspecialchars($c['course_code'] ?? '—') ?></td>
-                            <td><?= $c['class_type'] === 'T' ? 'Theory' : 'Practical' ?></td>
-                            <td style="text-align:right;">
-                                <a href="<?= BASE_URL ?>/admin/courses/edit.php?id=<?= $c['id'] ?>" class="btn btn-outline btn-sm">Edit</a>
-                                <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteCourse(<?= $c['id'] ?>, '<?= htmlspecialchars(addslashes($c['subject_name']), ENT_QUOTES) ?>', '<?= htmlspecialchars($c['course_code'] ?? '', ENT_QUOTES) ?>', <?= (int)$c['lecture_count'] ?>, 'Other')">Delete</button>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    <?php endif; ?>
 
 </div>
 </div>
@@ -372,22 +461,16 @@ $active_nav = 'courses-list';
 
 <script>
 function filterSemester(targetId, btn) {
-    // Update active tab button
     var buttons = document.querySelectorAll('.sem-tab-btn');
     buttons.forEach(function(b) { b.classList.remove('active'); });
     btn.classList.add('active');
 
-    // Show/hide sections
     var sections = document.querySelectorAll('.sem-section');
     if (targetId === 'all') {
         sections.forEach(function(sec) { sec.style.display = 'block'; });
     } else {
         sections.forEach(function(sec) {
-            if (sec.id === targetId) {
-                sec.style.display = 'block';
-            } else {
-                sec.style.display = 'none';
-            }
+            sec.style.display = (sec.id === targetId) ? 'block' : 'none';
         });
     }
 }
@@ -397,11 +480,7 @@ function searchCourses() {
     var rows = document.querySelectorAll('.course-row');
     rows.forEach(function(row) {
         var text = row.getAttribute('data-name') || '';
-        if (!q || text.indexOf(q) !== -1) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
+        row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
     });
 }
 
@@ -439,12 +518,118 @@ function closeCourseModal() {
     document.getElementById('deleteCourseModal').style.display = 'none';
 }
 
-document.getElementById('deleteCourseModal').addEventListener('click', function(e) {
-    if (e.target === this) closeCourseModal();
-});
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeCourseModal();
+function openEditTagModal(progId, semNum, semName, currentTag) {
+    document.getElementById('tagModalProgId').value = progId;
+    document.getElementById('tagModalSemNum').value = semNum;
+    document.getElementById('tagModalTitle').textContent = `Edit Year Tag · ${semName}`;
+    document.getElementById('tagModalInput').value = currentTag || '';
+    document.getElementById('tagModalMsg').style.display = 'none';
+    document.getElementById('tagModalSaveBtn').disabled = false;
+    document.getElementById('tagModalSaveBtn').textContent = 'Save Year Tag';
+    document.getElementById('editSemTagModal').style.display = 'flex';
+    document.getElementById('tagModalInput').focus();
+}
+
+function closeEditTagModal() {
+    document.getElementById('editSemTagModal').style.display = 'none';
+}
+
+function submitEditTag(e) {
+    e.preventDefault();
+    const progId = document.getElementById('tagModalProgId').value;
+    const semNum = document.getElementById('tagModalSemNum').value;
+    const newTag = document.getElementById('tagModalInput').value.trim();
+    const saveBtn = document.getElementById('tagModalSaveBtn');
+    const msgDiv = document.getElementById('tagModalMsg');
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    const formData = new FormData();
+    formData.append('program_id', progId);
+    formData.append('semester_number', semNum);
+    formData.append('year_tag', newTag);
+    formData.append('ajax', '1');
+
+    fetch('<?= BASE_URL ?>/admin/courses/update_semester_tag.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const badge = document.getElementById('sem-tag-badge-' + semNum);
+            if (badge) {
+                badge.textContent = newTag ? newTag : 'No Tag Set';
+                badge.style.background = '#dcfce7';
+                badge.style.color = '#15803d';
+                badge.style.borderColor = '#86efac';
+                setTimeout(() => {
+                    badge.style.background = '';
+                    badge.style.color = '';
+                    badge.style.borderColor = '';
+                }, 1800);
+            }
+            closeEditTagModal();
+        } else {
+            msgDiv.style.display = 'block';
+            msgDiv.style.background = '#fef2f2';
+            msgDiv.style.color = '#ef4444';
+            msgDiv.textContent = data.message || 'Failed to update tag.';
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Year Tag';
+        }
+    })
+    .catch(err => {
+        msgDiv.style.display = 'block';
+        msgDiv.style.background = '#fef2f2';
+        msgDiv.style.color = '#ef4444';
+        msgDiv.textContent = 'Network or server error: ' + err.message;
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Year Tag';
+    });
+}
+
+window.addEventListener('click', function(e) {
+    const modal = document.getElementById('editSemTagModal');
+    if (e.target === modal) {
+        closeEditTagModal();
+    }
 });
 </script>
+
+<!-- Edit Semester Year Tag Modal -->
+<div id="editSemTagModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:18px;max-width:440px;width:100%;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);overflow:hidden;">
+        <div style="padding:18px 24px;border-bottom:1px solid #f1f5f9;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;">
+            <div>
+                <h3 style="font-size:16px;font-weight:800;color:#0f172a;margin:0;" id="tagModalTitle">Edit Semester Year Tag</h3>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;"><?= htmlspecialchars($progName) ?></div>
+            </div>
+            <button type="button" onclick="closeEditTagModal()" style="background:none;border:none;cursor:pointer;color:#64748b;padding:4px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form id="tagEditForm" onsubmit="submitEditTag(event)" style="padding:22px 24px;">
+            <input type="hidden" id="tagModalProgId" value="">
+            <input type="hidden" id="tagModalSemNum" value="">
+
+            <div class="form-group" style="margin-bottom:18px;">
+                <label class="form-label" for="tagModalInput">Year Tag (e.g. 2022-2027, 2025-2027)</label>
+                <input type="text" id="tagModalInput" class="form-input" placeholder="e.g. 2022-2027" required style="font-size:15px;font-weight:600;">
+                <div style="font-size:12px;color:#64748b;margin-top:6px;">
+                    This year tag will appear directly beside this semester on curriculum, student rosters, and reports.
+                </div>
+            </div>
+
+            <div id="tagModalMsg" style="display:none;margin-bottom:14px;font-size:13px;padding:8px 12px;border-radius:8px;"></div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="closeEditTagModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary btn-sm" id="tagModalSaveBtn">Save Year Tag</button>
+            </div>
+        </form>
+    </div>
+</div>
 </body>
 </html>

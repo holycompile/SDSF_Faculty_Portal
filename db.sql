@@ -36,15 +36,49 @@ CREATE TABLE faculty_members (
   created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ── 2. COURSES ───────────────────────────────────────────────
+-- ── 2. ACADEMIC PROGRAMS & BATCHES ────────────────────────────
+CREATE TABLE IF NOT EXISTS academic_programs (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  program_name    VARCHAR(150) NOT NULL,
+  program_code    VARCHAR(50) NOT NULL,
+  batch_year      VARCHAR(50) NOT NULL,
+  total_semesters INT NOT NULL DEFAULT 4,
+  status          ENUM('active', 'inactive') DEFAULT 'active',
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_prog_batch (program_code, batch_year)
+);
+
+-- ── 2B. SEMESTER YEAR TAGS (Editable per semester) ───────────
+CREATE TABLE IF NOT EXISTS semester_tags (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  program_id      INT NOT NULL,
+  semester_number INT NOT NULL,
+  semester_name   VARCHAR(50) NOT NULL,
+  year_tag        VARCHAR(50) NOT NULL,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_prog_sem (program_id, semester_number),
+  FOREIGN KEY (program_id) REFERENCES academic_programs(id) ON DELETE CASCADE
+);
+
+-- ── 3. COURSES / SUBJECTS ────────────────────────────────────
 CREATE TABLE courses (
-  id           INT AUTO_INCREMENT PRIMARY KEY,
-  program      VARCHAR(100) NOT NULL,
-  semester     VARCHAR(50),
-  subject_name VARCHAR(150) NOT NULL,
-  course_code  VARCHAR(30),
-  class_type   ENUM('T','P') NOT NULL   COMMENT 'T=Theory Rs800/hr, P=Practical Rs400/hr',
-  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  program_id      INT NULL,
+  program         VARCHAR(100) NOT NULL,
+  batch_year      VARCHAR(50) NULL,
+  semester        VARCHAR(50),
+  semester_number INT NULL,
+  subject_name    VARCHAR(150) NOT NULL,
+  course_code     VARCHAR(30),
+  credits         INT NOT NULL DEFAULT 4,
+  lecture_hours   INT NOT NULL DEFAULT 3,
+  tutorial_hours  INT NOT NULL DEFAULT 0,
+  practical_hours INT NOT NULL DEFAULT 2,
+  ltp_pattern     VARCHAR(30) NOT NULL DEFAULT '4(3-0-2)',
+  class_type      ENUM('T','P') NOT NULL   COMMENT 'T=Theory, P=Practical',
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (program_id) REFERENCES academic_programs(id) ON DELETE CASCADE
 );
 
 -- ── 3. FACULTY COURSE ASSIGNMENTS (junction/bridge) ─────────
@@ -130,42 +164,17 @@ CREATE TABLE IF NOT EXISTS password_reset_otps (
   INDEX idx_user_otp (user_type, identifier, otp, is_used)
 );
 
--- ── SEED DATA: M.Tech AI&DS 9-Semester Courses ───────────────
-INSERT INTO courses (program, semester, subject_name, course_code, class_type) VALUES
--- 1st Semester
-('M.Tech AI&DS', '1st Semester', 'Advanced Data Structures & Algorithms', 'MT-101', 'T'),
-('M.Tech AI&DS', '1st Semester', 'Mathematical Foundations of Data Science', 'MT-102', 'T'),
-('M.Tech AI&DS', '1st Semester', 'Python Programming for AI Lab', 'MT-103P', 'P'),
--- 2nd Semester
-('M.Tech AI&DS', '2nd Semester', 'Machine Learning Techniques', 'MT-201', 'T'),
-('M.Tech AI&DS', '2nd Semester', 'Advanced Database Management Systems', 'MT-202', 'T'),
-('M.Tech AI&DS', '2nd Semester', 'Machine Learning Lab', 'MT-203P', 'P'),
--- 3rd Semester
-('M.Tech AI&DS', '3rd Semester', 'Deep Learning Architectures', 'MT-301', 'T'),
-('M.Tech AI&DS', '3rd Semester', 'Natural Language Processing', 'MT-302', 'T'),
-('M.Tech AI&DS', '3rd Semester', 'Deep Learning & NLP Lab', 'MT-303P', 'P'),
--- 4th Semester
-('M.Tech AI&DS', '4th Semester', 'Big Data Analytics & Engineering', 'MT-401', 'T'),
-('M.Tech AI&DS', '4th Semester', 'Computer Vision', 'MT-402', 'T'),
-('M.Tech AI&DS', '4th Semester', 'Big Data Analytics Lab', 'MT-403P', 'P'),
--- 5th Semester
-('M.Tech AI&DS', '5th Semester', 'Reinforcement Learning & Optimization', 'MT-501', 'T'),
-('M.Tech AI&DS', '5th Semester', 'Cloud Computing & MLOps', 'MT-502', 'T'),
-('M.Tech AI&DS', '5th Semester', 'Cloud AI Deployment Lab', 'MT-503P', 'P'),
--- 6th Semester
-('M.Tech AI&DS', '6th Semester', 'AI in IoT & Healthcare', 'MT-601', 'T'),
-('M.Tech AI&DS', '6th Semester', 'Research Methodology & Ethics', 'MT-602', 'T'),
-('M.Tech AI&DS', '6th Semester', 'Applied AI Capstone Lab', 'MT-603P', 'P'),
--- 7th Semester
-('M.Tech AI&DS', '7th Semester', 'Data Mining & Knowledge Discovery', 'MT-701', 'T'),
-('M.Tech AI&DS', '7th Semester', 'Information Retrieval', 'MT-702', 'T'),
-('M.Tech AI&DS', '7th Semester', 'Minor Project & Seminar', 'MT-703P', 'P'),
--- 8th Semester
-('M.Tech AI&DS', '8th Semester', 'Industrial Training & Research Seminar', 'MT-801', 'T'),
-('M.Tech AI&DS', '8th Semester', 'Major Project Phase-I Lab', 'MT-802P', 'P'),
--- 9th Semester
-('M.Tech AI&DS', '9th Semester', 'Comprehensive Viva & Defense', 'MT-901', 'T'),
-('M.Tech AI&DS', '9th Semester', 'Major Project Phase-II / Dissertation', 'MT-902P', 'P');
+
+-- ── SEED DATA: Academic Programs & Batches ───────────────────
+INSERT INTO academic_programs (program_name, program_code, batch_year, total_semesters) VALUES
+('M.Tech AI&DS',     'MTECH-AIDS', '2022-2027', 10),
+('M.Tech BDA',       'MTECH-BDA',  '2025-2027', 4),
+('M.Tech DS',        'MTECH-DS',   '2025-2027', 4),
+('MBA BA',           'MBA-BA',     '2025-2027', 4),
+('M.Sc DSA',         'MSC-DSA',    '2025-2027', 4),
+('M.Tech Executive', 'MTECH-EXEC', '2025-2027', 4)
+ON DUPLICATE KEY UPDATE program_name=VALUES(program_name), total_semesters=VALUES(total_semesters);
 
 SELECT 'Schema created successfully' AS status;
+SELECT COUNT(*) AS total_programs FROM academic_programs;
 SELECT COUNT(*) AS total_courses FROM courses;

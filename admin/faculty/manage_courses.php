@@ -183,7 +183,7 @@ $active_nav = 'faculty-list';
                 <div class="assigned-row">
                     <div>
                         <div style="font-size:11.5px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.04em;">
-                            <?= htmlspecialchars($ac['program']) ?> &bull; <?= htmlspecialchars($ac['semester'] ?? '') ?>
+                            <?= htmlspecialchars($ac['program']) ?> &bull; <?= htmlspecialchars($ac['semester'] ?? '') ?><?= !empty($ac['batch_year']) ? ' ('.htmlspecialchars($ac['batch_year']).')' : '' ?>
                         </div>
                         <div style="font-size:14px;font-weight:600;color:#0f172a;margin:3px 0 2px;">
                             <?= htmlspecialchars($ac['subject_name']) ?>
@@ -242,7 +242,7 @@ $active_nav = 'faculty-list';
                             <label class="course-item" data-search="<?= strtolower($course['program'].' '.$course['subject_name'].' '.$course['course_code'].' '.$course['semester']) ?>">
                                 <input type="checkbox" name="course_ids[]" value="<?= $course['id'] ?>" onchange="updateAddCount()">
                                 <div>
-                                    <div class="course-prog"><?= htmlspecialchars($course['program']) ?> &bull; <?= htmlspecialchars($course['semester'] ?? '') ?></div>
+                                    <div class="course-prog"><?= htmlspecialchars($course['program']) ?> &bull; <?= htmlspecialchars($course['semester'] ?? '') ?><?= !empty($course['batch_year']) ? ' ('.htmlspecialchars($course['batch_year']).')' : '' ?></div>
                                     <div class="course-sub"><?= htmlspecialchars($course['subject_name']) ?></div>
                                     <div class="course-meta">
                                         <?= $course['course_code'] ? '<span style="font-family:monospace;">' . htmlspecialchars($course['course_code']) . '</span> &middot; ' : '' ?>

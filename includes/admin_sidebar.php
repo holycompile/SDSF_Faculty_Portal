@@ -126,14 +126,18 @@ table.dt{width:100%;border-collapse:collapse;}
             Register Faculty
         </a>
 
-        <div class="nav-section">Courses</div>
+        <div class="nav-section">Courses &amp; Curriculum</div>
         <a href="<?= BASE_URL ?>/admin/courses/list.php" class="nav-link <?= $_active==='courses-list'?'active':'' ?>">
             <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-            All Courses
+            Course Curriculum
+        </a>
+        <a href="<?= BASE_URL ?>/admin/courses/programs.php" class="nav-link <?= $_active==='courses-programs'?'active':'' ?>">
+            <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            Programs &amp; Batches
         </a>
         <a href="<?= BASE_URL ?>/admin/courses/add.php" class="nav-link <?= $_active==='courses-add'?'active':'' ?>">
             <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-            Add Course
+            Add Subject
         </a>
 
         <div class="nav-section">Records</div>

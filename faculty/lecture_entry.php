@@ -6,23 +6,24 @@ require_once ROOT . '/includes/helpers.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 requireFaculty();
 
-$facultyId = (int)$_SESSION['faculty_id'];
+$facultyId = getFacultyId();
+$facultyName = $_SESSION['faculty_name'] ?? 'Faculty Member';
 
-// Get faculty details including custom remuneration rates
-$fStmt = $pdo->prepare("SELECT * FROM faculty_members WHERE id = ?");
+// Fetch faculty rates
+$fStmt = $pdo->prepare("SELECT theory_rate, practical_rate FROM faculty_members WHERE id = ?");
 $fStmt->execute([$facultyId]);
-$facultyMember = $fStmt->fetch();
+$facultyData = $fStmt->fetch();
+$facTheoryRate = (float)($facultyData['theory_rate'] ?? 800.00);
+$facPracticalRate = (float)($facultyData['practical_rate'] ?? 400.00);
 
-$facTheoryRate    = (float)($facultyMember['theory_rate'] ?? 800.00);
-$facPracticalRate = (float)($facultyMember['practical_rate'] ?? 400.00);
-
-// Get assigned courses
+// Fetch assigned courses with full L-T-P details
 $stmt = $pdo->prepare("
-    SELECT c.* 
+    SELECT c.*, ap.program_name AS prog_title, ap.batch_year AS prog_batch
     FROM courses c
     JOIN faculty_course_assignments fca ON fca.course_id = c.id
+    LEFT JOIN academic_programs ap ON ap.id = c.program_id
     WHERE fca.faculty_id = ?
-    ORDER BY c.program, c.semester, c.subject_name
+    ORDER BY c.program, c.semester_number, c.semester, c.subject_name
 ");
 $stmt->execute([$facultyId]);
 $courses = $stmt->fetchAll();
@@ -31,9 +32,10 @@ $errors = [];
 $preselectedCourseId = (int)($_GET['course_id'] ?? 0);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $courseId = (int)($_POST['course_id'] ?? 0);
+    $courseId    = (int)($_POST['course_id'] ?? 0);
     $lectureDate = trim($_POST['lecture_date'] ?? '');
-    $hours = (float)($_POST['hours'] ?? 0);
+    $hours       = (float)($_POST['hours'] ?? 0);
+    $sessionType = trim($_POST['session_type'] ?? 'T'); // 'T' or 'P'
 
     // Validate course belongs to faculty
     $matchedCourse = null;
@@ -59,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         try {
             // Apply this teacher's specific configured rates
-            $rate = ($matchedCourse['class_type'] === 'T') ? $facTheoryRate : $facPracticalRate;
+            $rate = ($sessionType === 'P') ? $facPracticalRate : $facTheoryRate;
             $amount = round($hours * $rate, 2);
 
             $ins = $pdo->prepare("
@@ -79,51 +81,136 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $monthTotal = (float)$mStmt->fetchColumn();
 
             if ($monthTotal > 30000) {
-                setFlash('warning', "Lecture logged successfully (Earned: Rs. {$amount})! Note: Your total remuneration for " . date('F Y', strtotime($lectureDate)) . " is now Rs. " . number_format($monthTotal, 2) . ", which exceeds the Rs. 30,000 monthly ceiling.");
+                setFlash('warning', "Lecture logged successfully (Remuneration: Rs. " . number_format($amount, 2) . ")! Note: Monthly total is Rs. " . number_format($monthTotal, 2) . ", which exceeds the Rs. 30,000 ceiling.");
             } else {
-                setFlash('success', "Lecture session logged successfully! Calculated remuneration: Rs. " . number_format($amount, 2));
+                setFlash('success', "Lecture session successfully saved! Calculated remuneration: Rs. " . number_format($amount, 2) . ".");
             }
 
             header('Location: ' . BASE_URL . '/faculty/dashboard.php');
             exit;
         } catch (PDOException $e) {
-            $errors[] = 'Failed to log lecture: ' . $e->getMessage();
+            $errors[] = 'Database error: ' . $e->getMessage();
         }
     }
 }
 
-$active_nav = 'lecture_entry';
+$active_nav = 'lecture-entry';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Log Lecture — SDSF Faculty Portal</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Log Lecture Session — Faculty Portal</title>
     <link rel="stylesheet" href="<?= BASE_URL ?>/tailwind/output.css">
     <style>
-        .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 36px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -2px rgba(0,0,0,0.03); }
-        .form-group { margin-bottom: 22px; }
-        .form-label { display: block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #475569; margin-bottom: 8px; }
-        .form-input, .form-select { width: 100%; padding: 12px 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; color: #0f172a; font-size: 15px; font-family: 'Inter', sans-serif; transition: all .2s; outline: none; }
-        .form-input:focus, .form-select:focus { background: #fff; border-color: #1e3a8a; box-shadow: 0 0 0 3px rgba(30,58,138,.12); }
-        .calc-box { background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 16px; padding: 20px 24px; margin: 24px 0; }
-        .calc-row { display: flex; align-items: center; justify-content: space-between; font-size: 14px; margin-bottom: 8px; }
-        .calc-row:last-child { margin-bottom: 0; padding-top: 10px; border-top: 1px dashed #bfdbfe; }
-        .btn-submit { width: 100%; padding: 14px; background: #1e3a8a; border: none; border-radius: 12px; color: #fff; font-size: 15px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; transition: all .2s; box-shadow: 0 4px 14px rgba(30,58,138,0.3); }
-        .btn-submit:hover { background: #172554; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(30,58,138,0.4); }
-        .alert-error { background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; color: #ef4444; font-size: 14px; }
-        .btn-outline-teal { background: #fff; color: #1e3a8a; border: 1.5px solid #bfdbfe; padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+        .page {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+        .form-select, .form-input {
+            width: 100%;
+            padding: 11px 14px;
+            border-radius: 10px;
+            border: 1.5px solid #cbd5e1;
+            background: #fff;
+            font-size: 14px;
+            color: #0f172a;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+        .form-select:focus, .form-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.15);
+        }
+        .calc-box {
+            background: #f8fafc;
+            border: 1.5px dashed #6366f1;
+            border-radius: 14px;
+            padding: 18px 22px;
+            margin-top: 10px;
+            margin-bottom: 24px;
+        }
+        .calc-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13.5px;
+            padding: 6px 0;
+            border-bottom: 1px solid #edf2f7;
+        }
+        .calc-row:last-child {
+            border-bottom: none;
+            padding-top: 10px;
+            margin-top: 4px;
+        }
+        .btn-submit {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px 24px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #4f46e5, #4338ca);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(79,70,229,0.35);
+            transition: all .2s ease;
+        }
+        .btn-submit:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+        .session-toggle {
+            display: inline-flex;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            gap: 4px;
+        }
+        .session-toggle label {
+            padding: 8px 18px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all .15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .session-toggle input[type="radio"] {
+            display: none;
+        }
+        .session-toggle input[type="radio"]:checked + label {
+            background: #ffffff;
+            color: #4f46e5;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
     </style>
     <?php require_once ROOT . '/includes/faculty_sidebar.php'; ?>
 </head>
 <body>
     <header class="topbar">
         <div class="tb-left">
-            <span class="tb-crumb">Log Conducted Lecture</span>
+            <span class="tb-crumb">Log Lecture Session</span>
         </div>
         <div class="tb-right">
             <span class="tb-date"><?= date('l, d F Y') ?></span>
@@ -135,13 +222,13 @@ $active_nav = 'lecture_entry';
 
     <div class="page">
         <div style="max-width: 800px; margin: 0 auto;">
-            <div style="margin-bottom: 28px;">
+            <div style="margin-bottom: 24px;">
                 <h1 style="font-size: 24px; font-weight: 800; color: #0f172a; margin: 0 0 6px;">Log Conducted Lecture</h1>
-                <p style="font-size: 14.5px; color: #64748b; margin: 0;">Submit session details for automated remuneration billing under SDSF DAVV regulations.</p>
+                <p style="font-size: 14.5px; color: #64748b; margin: 0;">Select your assigned subject, pick session details, and calculate remuneration automatically.</p>
             </div>
 
         <?php if (!empty($errors)): ?>
-            <div class="alert-error">
+            <div class="alert-error" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 16px;border-radius:10px;margin-bottom:20px;">
                 <ul style="margin: 0; padding-left: 20px;">
                     <?php foreach ($errors as $e): ?>
                         <li><?= htmlspecialchars($e) ?></li>
@@ -154,108 +241,154 @@ $active_nav = 'lecture_entry';
             <div class="card" style="text-align:center;padding:50px 20px;">
                 <p style="color:#ef4444;font-weight:600;font-size:16px;">No courses assigned to your account!</p>
                 <p style="color:#64748b;font-size:14px;">You cannot log lectures without an assigned course. Please contact the administrator.</p>
-                <a href="<?= BASE_URL ?>/faculty/dashboard.php" class="btn-outline-teal" style="margin-top:12px;">Return to Dashboard</a>
+                <a href="<?= BASE_URL ?>/faculty/dashboard.php" class="btn btn-outline" style="margin-top:12px;">Return to Dashboard</a>
             </div>
         <?php else: ?>
-            <div class="card">
+            <div class="card" style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,0.03);">
                 <form method="POST" id="lectureForm">
                     <div class="form-group">
-                        <label class="form-label" for="course_id">Course / Subject (From Assigned Courses)</label>
-                        <select name="course_id" id="course_id" class="form-select" required onchange="calculateRemuneration()">
+                        <label class="form-label" for="course_id">Course / Subject (From Assigned Courses) *</label>
+                        <select name="course_id" id="course_id" class="form-select" required onchange="onCourseSelected()">
                             <option value="">-- Choose Assigned Course --</option>
                             <?php foreach ($courses as $c): 
-                                $rateVal = ($c['class_type'] === 'T') ? $facTheoryRate : $facPracticalRate;
-                                $typeTxt = ($c['class_type'] === 'T') 
-                                    ? 'Theory (Rs. ' . number_format($facTheoryRate, 0) . '/hr)' 
-                                    : 'Practical (Rs. ' . number_format($facPracticalRate, 0) . '/hr)';
+                                $ltpPattern = $c['ltp_pattern'] ?: ($c['credits'] . '(' . $c['lecture_hours'] . '-' . $c['tutorial_hours'] . '-' . $c['practical_hours'] . ')');
                                 $selected = ($preselectedCourseId == $c['id']) ? 'selected' : '';
+                                $progLabel = $c['prog_title'] ?? $c['program'];
+                                $batchLabel = $c['batch_year'] ?? $c['prog_batch'] ?? '';
                             ?>
                                 <option value="<?= $c['id'] ?>" 
-                                        data-type="<?= $c['class_type'] ?>" 
-                                        data-rate="<?= $rateVal ?>"
+                                        data-ltp="<?= htmlspecialchars($ltpPattern) ?>"
+                                        data-p-hours="<?= (int)($c['practical_hours'] ?? 0) ?>"
+                                        data-l-hours="<?= (int)($c['lecture_hours'] ?? 3) ?>"
                                         data-name="<?= htmlspecialchars($c['subject_name']) ?>"
+                                        data-code="<?= htmlspecialchars($c['course_code'] ?? '') ?>"
+                                        data-program="<?= htmlspecialchars($progLabel) ?>"
+                                        data-semester="<?= htmlspecialchars($c['semester']) ?>"
                                         <?= $selected ?>>
-                                    <?= htmlspecialchars($c['program']) ?> (Sem <?= htmlspecialchars($c['semester']) ?>) &bull; <?= htmlspecialchars($c['subject_name']) ?> [<?= htmlspecialchars($c['course_code']) ?>] — <?= $typeTxt ?>
+                                    <?= htmlspecialchars($progLabel) ?> &bull; <?= htmlspecialchars($c['semester']) ?> &bull; <?= htmlspecialchars($c['subject_name']) ?> [<?= htmlspecialchars($c['course_code']) ?>] &bull; Credits: <?= htmlspecialchars($ltpPattern) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
+                    <!-- Session Type Toggle (Theory vs Practical) -->
+                    <div class="form-group" id="sessionTypeGroup">
+                        <label class="form-label">Conducted Session Type *</label>
+                        <div class="session-toggle">
+                            <input type="radio" name="session_type" id="type_t" value="T" checked onchange="calculateRemuneration()">
+                            <label for="type_t">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                                Theory Lecture (₹<?= number_format($facTheoryRate, 0) ?>/hr)
+                            </label>
+
+                            <input type="radio" name="session_type" id="type_p" value="P" onchange="calculateRemuneration()">
+                            <label for="type_p">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                                Practical / Lab (₹<?= number_format($facPracticalRate, 0) ?>/hr)
+                            </label>
+                        </div>
+                    </div>
+
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
                         <div class="form-group">
-                            <label class="form-label" for="lecture_date">Lecture Date</label>
+                            <label class="form-label" for="lecture_date">Lecture Date *</label>
                             <input type="date" name="lecture_date" id="lecture_date" class="form-input" 
                                    max="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>" required>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label" for="hours">Duration (in Hours)</label>
+                            <label class="form-label" for="hours">Duration (in Hours) *</label>
                             <input type="number" step="0.5" min="0.5" max="12" name="hours" id="hours" class="form-input" 
                                    value="1.0" required oninput="calculateRemuneration()">
-                            <div style="font-size:12px;color:#94a3b8;margin-top:4px;">e.g. 1.0, 1.5, 2.0 hrs</div>
+                            <div style="font-size:12px;color:#94a3b8;margin-top:4px;">Standard durations: 1.0, 1.5, 2.0 hrs</div>
                         </div>
                     </div>
 
                     <!-- Live Calculation Preview -->
                     <div class="calc-box">
-                        <div style="font-size:12px;font-weight:700;color:#0d9488;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
-                            Automated Remuneration Calculation
+                        <div style="font-size:12px;font-weight:800;color:#4338ca;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
+                            Automated Remuneration Preview
                         </div>
                         <div class="calc-row">
-                            <span style="color:#64748b;">Class Category:</span>
-                            <span id="previewCategory" style="font-weight:600;color:#0f172a;">Please select course</span>
+                            <span style="color:#64748b;">Subject Credits (L T P):</span>
+                            <span id="previewLtp" style="font-family:monospace;font-weight:800;color:#0f172a;">—</span>
                         </div>
                         <div class="calc-row">
-                            <span style="color:#64748b;">Prescribed Hourly Rate:</span>
-                            <span id="previewRate" style="font-weight:600;color:#0f172a;">—</span>
+                            <span style="color:#64748b;">Session Type:</span>
+                            <span id="previewSessionType" style="font-weight:600;color:#0f172a;">Theory Lecture</span>
+                        </div>
+                        <div class="calc-row">
+                            <span style="color:#64748b;">Configured Hourly Rate:</span>
+                            <span id="previewRate" style="font-weight:700;color:#0f172a;">₹<?= number_format($facTheoryRate, 2) ?> / hr</span>
                         </div>
                         <div class="calc-row">
                             <span style="color:#64748b;">Duration:</span>
                             <span id="previewHours" style="font-weight:600;color:#0f172a;">1.0 Hour</span>
                         </div>
                         <div class="calc-row">
-                            <span style="font-size:15px;font-weight:700;color:#0f172a;">Calculated Amount Payable:</span>
-                            <span id="previewAmount" style="font-size:18px;font-weight:800;color:#047857;">&#8377;0.00</span>
+                            <span style="font-size:15px;font-weight:800;color:#0f172a;">Total Remuneration:</span>
+                            <span id="previewAmount" style="font-size:19px;font-weight:800;color:#047857;">&#8377;<?= number_format($facTheoryRate, 2) ?></span>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-submit">
-                        Submit & Save Lecture Session
+                    <button type="submit" class="btn-submit" id="submitBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Save Lecture Session
                     </button>
                 </form>
             </div>
         <?php endif; ?>
         </div>
     </div>
-</div>
 
     <script>
+    const theoryRate = <?= $facTheoryRate ?>;
+    const practicalRate = <?= $facPracticalRate ?>;
+
     function calculateRemuneration() {
         const select = document.getElementById('course_id');
+        if (!select) return;
         const selectedOption = select.options[select.selectedIndex];
         const hoursInput = document.getElementById('hours');
         const hours = parseFloat(hoursInput.value) || 0;
 
-        if (!selectedOption || !selectedOption.value) {
-            document.getElementById('previewCategory').textContent = 'Please select course';
-            document.getElementById('previewRate').textContent = '—';
-            document.getElementById('previewAmount').innerHTML = '&#8377;0.00';
-            return;
-        }
+        const isPractical = document.getElementById('type_p').checked;
+        const currentRate = isPractical ? practicalRate : theoryRate;
+        const total = hours * currentRate;
 
-        const type = selectedOption.getAttribute('data-type');
-        const rate = parseFloat(selectedOption.getAttribute('data-rate')) || 0;
-        const total = hours * rate;
-
-        document.getElementById('previewCategory').textContent = (type === 'T') ? 'Theory Class (T)' : 'Practical / Lab Class (P)';
-        document.getElementById('previewRate').textContent = 'Rs. ' + rate.toFixed(2) + ' / hr';
+        document.getElementById('previewSessionType').textContent = isPractical ? 'Practical / Lab Class' : 'Theory Lecture';
+        document.getElementById('previewRate').textContent = '₹' + currentRate.toFixed(2) + ' / hr';
         document.getElementById('previewHours').textContent = hours.toFixed(1) + ' Hours';
         document.getElementById('previewAmount').innerHTML = '&#8377;' + total.toFixed(2);
+
+        if (selectedOption && selectedOption.value) {
+            document.getElementById('previewLtp').textContent = selectedOption.getAttribute('data-ltp') || '—';
+        } else {
+            document.getElementById('previewLtp').textContent = '—';
+        }
     }
 
-    // Run on page load in case course is preselected
-    window.addEventListener('DOMContentLoaded', calculateRemuneration);
+    function onCourseSelected() {
+        const select = document.getElementById('course_id');
+        const selectedOption = select ? select.options[select.selectedIndex] : null;
+
+        if (selectedOption && selectedOption.value) {
+            const pHours = parseInt(selectedOption.getAttribute('data-p-hours')) || 0;
+            const lHours = parseInt(selectedOption.getAttribute('data-l-hours')) || 0;
+
+            if (pHours > 0 && lHours === 0) {
+                document.getElementById('type_p').checked = true;
+            } else {
+                document.getElementById('type_t').checked = true;
+            }
+        }
+        calculateRemuneration();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        onCourseSelected();
+    });
     </script>
 </body>
 </html>
