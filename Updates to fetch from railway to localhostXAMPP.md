@@ -40,10 +40,39 @@ Before running the command:
 
 ---
 
-## 🔄 Optional: Push from Localhost XAMPP to Railway
+## 🔄 Push from Localhost XAMPP to Railway Cloud (Reverse Sync)
 
-If you ever make changes locally and want to overwrite Railway with your local database:
+If you made changes locally (such as dropping rows from `admin`, adding courses, or testing updates) and want to push your local database back to **Railway**:
+
+### ⚡ Instant 1-Line Push Command
+
+Open **Windows PowerShell** or **Command Prompt** and run:
 
 ```cmd
 mysqldump -u root sdsf_faculty_portal | mysql -h gondola.proxy.rlwy.net -u root -pGPytSfJeALfRdUMOzJJUMwuIrdBqCDcu --port 23635 --protocol=TCP railway
 ```
+
+### 📋 Recommended Safe Workflow: Pull &rarr; Edit &rarr; Push
+
+1. **Step 1 — Pull latest from Railway** (ensures you don't lose any live lecture/course data):
+   ```cmd
+   mysqldump -h gondola.proxy.rlwy.net -u root -pGPytSfJeALfRdUMOzJJUMwuIrdBqCDcu --port 23635 --protocol=TCP railway | mysql -u root sdsf_faculty_portal
+   ```
+2. **Step 2 — Make your edits locally**:
+   - Open **phpMyAdmin** (`http://localhost/phpmyadmin`) or MySQL CLI.
+   - Drop the admin row, edit subjects, or test whatever you need.
+3. **Step 3 — Push back to Railway**:
+   ```cmd
+   mysqldump -u root sdsf_faculty_portal | mysql -h gondola.proxy.rlwy.net -u root -pGPytSfJeALfRdUMOzJJUMwuIrdBqCDcu --port 23635 --protocol=TCP railway
+   ```
+
+---
+
+### 🎯 Fast Alternative: Delete a Specific Row on Railway Directly
+
+If you only want to delete an admin row on Railway without replacing the entire database:
+
+```cmd
+mysql -h gondola.proxy.rlwy.net -u root -pGPytSfJeALfRdUMOzJJUMwuIrdBqCDcu --port 23635 --protocol=TCP railway -e "DELETE FROM admin WHERE username='username_here';"
+```
+*(Replace `username_here` with the exact admin username, or use `WHERE id=...`)*
