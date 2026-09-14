@@ -7,6 +7,10 @@ RUN docker-php-ext-install pdo pdo_mysql
 RUN a2enmod rewrite \
     && sed -ri -e 's!AllowOverride None!AllowOverride All!g' /etc/apache2/apache2.conf
 
+# Configure Apache to listen on $PORT provided dynamically by Railway
+RUN sed -i 's/80/${PORT}/g' /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf
+ENV PORT=80
+
 # Copy project files
 COPY . /var/www/html/
 
