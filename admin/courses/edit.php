@@ -33,6 +33,9 @@ foreach ($semTagsAll as $st) {
 }
 
 $errors = [];
+$fromProg = trim($_GET['from_prog'] ?? ($course['program'] ?? ''));
+$fromSem  = (int)($_GET['from_sem'] ?? ($course['semester_number'] ?? 0));
+$backUrl  = BASE_URL . '/admin/courses/list.php' . ($fromProg ? '?program=' . urlencode($fromProg) . ($fromSem ? '&sem=' . $fromSem . '#sem-' . $fromSem : '') : '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $program_id      = (int)($_POST['program_id']      ?? 0);
@@ -102,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->commit();
             setFlash('success', "Subject \"{$subject_name}\" updated successfully!");
-            header('Location: ' . BASE_URL . '/admin/courses/list.php?program=' . urlencode($matchedProg['program_name']));
+            header('Location: ' . BASE_URL . '/admin/courses/list.php?program=' . urlencode($matchedProg['program_name']) . '&sem=' . $semNumber . '#sem-' . $semNumber);
             exit;
         } catch (PDOException $e) {
             if ($pdo->inTransaction()) {
@@ -129,12 +132,12 @@ $active_nav = 'courses-list';
     <div class="tb-left">
         <a href="<?= BASE_URL ?>/admin/dashboard.php" style="color:#94a3b8;text-decoration:none;">Dashboard</a>
         <span class="tb-sep">/</span>
-        <a href="<?= BASE_URL ?>/admin/courses/list.php" style="color:#94a3b8;text-decoration:none;">Courses</a>
+        <a href="<?= $backUrl ?>" style="color:#94a3b8;text-decoration:none;">Courses</a>
         <span class="tb-sep">/</span>
         <span class="tb-crumb">Edit Subject</span>
     </div>
     <div class="tb-right">
-        <a href="<?= BASE_URL ?>/admin/courses/list.php" class="btn btn-outline btn-sm">&larr; Back to Courses</a>
+        <a href="<?= $backUrl ?>" class="btn btn-outline btn-sm">&larr; Back to Courses</a>
     </div>
 </header>
 
@@ -247,7 +250,7 @@ $active_nav = 'courses-list';
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                             Update Subject
                         </button>
-                        <a href="<?= BASE_URL ?>/admin/courses/list.php?program=<?= urlencode($course['program']) ?>" class="btn btn-outline">Cancel</a>
+                        <a href="<?= $backUrl ?>" class="btn btn-outline">Cancel</a>
                     </div>
                 </form>
             </div>

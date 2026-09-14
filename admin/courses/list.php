@@ -16,9 +16,10 @@ if (empty($programs)) {
 } else {
     // Determine active program
     $reqProgName = trim($_GET['program'] ?? '');
+    $reqProgId   = (int)($_GET['program_id'] ?? 0);
     $selectedProgram = $programs[0]; // default
     foreach ($programs as $p) {
-        if ($reqProgName && (strcasecmp($p['program_name'], $reqProgName) === 0 || (int)($_GET['program_id'] ?? 0) === (int)$p['id'])) {
+        if (($reqProgName && strcasecmp($p['program_name'], $reqProgName) === 0) || ($reqProgId && (int)$p['id'] === $reqProgId)) {
             $selectedProgram = $p;
             break;
         }
@@ -243,7 +244,7 @@ $active_nav = 'courses-list';
         <span class="tb-crumb"><?= htmlspecialchars($progName) ?></span>
     </div>
     <div class="tb-right" style="display:flex;gap:10px;align-items:center;">
-        <a href="<?= BASE_URL ?>/admin/courses/programs.php" class="btn btn-outline btn-sm">
+        <a href="<?= BASE_URL ?>/admin/courses/programs.php?from_prog=<?= urlencode($progName) ?>" class="btn btn-outline btn-sm">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
             Manage Programs &amp; Batches
         </a>
@@ -406,7 +407,7 @@ $active_nav = 'courses-list';
                                 </td>
                                 <td style="text-align:right;">
                                     <div style="display:inline-flex;gap:6px;">
-                                        <a href="<?= BASE_URL ?>/admin/courses/edit.php?id=<?= $c['id'] ?>" class="btn btn-outline btn-sm" title="Edit Subject">
+                                        <a href="<?= BASE_URL ?>/admin/courses/edit.php?id=<?= $c['id'] ?>&from_prog=<?= urlencode($progName) ?>&from_sem=<?= $semNum ?>" class="btn btn-outline btn-sm" title="Edit Subject">
                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                             Edit
                                         </a>
@@ -450,6 +451,7 @@ $active_nav = 'courses-list';
             </button>
             <form method="POST" action="<?= BASE_URL ?>/admin/courses/delete.php" id="deleteForm" style="flex:1;margin:0;">
                 <input type="hidden" name="course_id" id="modal-cid">
+                <input type="hidden" name="return_url" id="modal-return-url" value="">
                 <button type="submit" id="modal-submit-btn"
                     style="width:100%;padding:11px;border-radius:10px;border:none;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;">
                     Yes, Delete
@@ -463,15 +465,23 @@ $active_nav = 'courses-list';
 function filterSemester(targetId, btn) {
     var buttons = document.querySelectorAll('.sem-tab-btn');
     buttons.forEach(function(b) { b.classList.remove('active'); });
-    btn.classList.add('active');
+    if (btn) btn.classList.add('active');
 
     var sections = document.querySelectorAll('.sem-section');
+    var currentUrl = new URL(window.location.href);
     if (targetId === 'all') {
         sections.forEach(function(sec) { sec.style.display = 'block'; });
+        currentUrl.searchParams.delete('sem');
+        currentUrl.hash = '';
+        history.replaceState(null, '', currentUrl.toString());
     } else {
         sections.forEach(function(sec) {
             sec.style.display = (sec.id === targetId) ? 'block' : 'none';
         });
+        var semNum = targetId.replace('sem-', '');
+        currentUrl.searchParams.set('sem', semNum);
+        currentUrl.hash = targetId;
+        history.replaceState(null, '', currentUrl.toString());
     }
 }
 
@@ -489,6 +499,16 @@ function confirmDeleteCourse(id, name, code, lectureCount, semName) {
     document.getElementById('modal-cname').textContent = name;
     document.getElementById('modal-ccode').textContent = code ? code : 'No Code';
     document.getElementById('modal-csem').textContent = semName;
+
+    // Ensure return_url keeps the active program, semester query, and hash
+    var semMatch = semName ? semName.match(/\d+/) : null;
+    var semNum = semMatch ? semMatch[0] : '';
+    var returnUrl = new URL(window.location.href);
+    if (semNum) {
+        returnUrl.searchParams.set('sem', semNum);
+        returnUrl.hash = 'sem-' + semNum;
+    }
+    document.getElementById('modal-return-url').value = returnUrl.toString();
 
     var warnDiv = document.getElementById('modal-warning');
     var submitBtn = document.getElementById('modal-submit-btn');
@@ -517,6 +537,32 @@ function confirmDeleteCourse(id, name, code, lectureCount, semName) {
 function closeCourseModal() {
     document.getElementById('deleteCourseModal').style.display = 'none';
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    var params = new URLSearchParams(window.location.search);
+    var semParam = params.get('sem');
+    var hash = window.location.hash;
+    var targetId = null;
+
+    if (semParam) {
+        targetId = 'sem-' + semParam;
+    } else if (hash && hash.indexOf('sem-') !== -1) {
+        targetId = hash.replace('#', '');
+    }
+
+    if (targetId) {
+        var btn = document.querySelector('.sem-tab-btn[onclick*="\'' + targetId + '\'"]');
+        if (btn) {
+            filterSemester(targetId, btn);
+        }
+        var targetSec = document.getElementById(targetId);
+        if (targetSec) {
+            setTimeout(function() {
+                targetSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+    }
+});
 
 function openEditTagModal(progId, semNum, semName, currentTag) {
     document.getElementById('tagModalProgId').value = progId;

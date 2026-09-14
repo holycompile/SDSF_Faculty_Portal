@@ -17,6 +17,12 @@ foreach ($semTagsAll as $st) {
 $errors = [];
 $preProgramName = trim($_GET['program'] ?? '');
 $preSemester    = trim($_GET['semester'] ?? '');
+$preSemNum = 0;
+if ($preSemester) {
+    preg_match('/\d+/', $preSemester, $sm);
+    $preSemNum = isset($sm[0]) ? (int)$sm[0] : 0;
+}
+$backUrl = BASE_URL . '/admin/courses/list.php' . ($preProgramName ? '?program=' . urlencode($preProgramName) . ($preSemNum ? '&sem=' . $preSemNum . '#sem-' . $preSemNum : '') : '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $program_id      = (int)($_POST['program_id']      ?? 0);
@@ -81,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             setFlash('success', "Subject \"{$subject_name}\" with Credits {$ltp_pattern} added to {$matchedProg['program_name']} ({$semester}) successfully!");
-            header('Location: ' . BASE_URL . '/admin/courses/list.php?program=' . urlencode($matchedProg['program_name']));
+            header('Location: ' . BASE_URL . '/admin/courses/list.php?program=' . urlencode($matchedProg['program_name']) . '&sem=' . $semNumber . '#sem-' . $semNumber);
             exit;
         } catch (PDOException $e) {
             $errors[] = 'Failed to add subject: ' . $e->getMessage();
@@ -105,12 +111,12 @@ $active_nav = 'courses-add';
     <div class="tb-left">
         <a href="<?= BASE_URL ?>/admin/dashboard.php" style="color:#94a3b8;text-decoration:none;">Dashboard</a>
         <span class="tb-sep">/</span>
-        <a href="<?= BASE_URL ?>/admin/courses/list.php" style="color:#94a3b8;text-decoration:none;">Courses</a>
+        <a href="<?= $backUrl ?>" style="color:#94a3b8;text-decoration:none;">Courses</a>
         <span class="tb-sep">/</span>
         <span class="tb-crumb">Add Subject</span>
     </div>
     <div class="tb-right">
-        <a href="<?= BASE_URL ?>/admin/courses/list.php" class="btn btn-outline btn-sm">&larr; Back to Courses</a>
+        <a href="<?= $backUrl ?>" class="btn btn-outline btn-sm">&larr; Back to Courses</a>
     </div>
 </header>
 
@@ -231,7 +237,7 @@ $active_nav = 'courses-add';
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                             Save Subject
                         </button>
-                        <a href="<?= BASE_URL ?>/admin/courses/list.php" class="btn btn-outline">Cancel</a>
+                        <a href="<?= $backUrl ?>" class="btn btn-outline">Cancel</a>
                     </div>
                 </form>
             </div>

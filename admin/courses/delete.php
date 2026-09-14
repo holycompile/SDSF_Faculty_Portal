@@ -6,29 +6,35 @@ require_once ROOT . '/includes/helpers.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 requireAdmin();
 
+$returnUrl = trim($_POST['return_url'] ?? '');
+
 // Only allow POST requests — never GET
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ' . BASE_URL . '/admin/courses/list.php');
+    header('Location: ' . ($returnUrl ?: (BASE_URL . '/admin/courses/list.php')));
     exit;
 }
 
 $id = (int)($_POST['course_id'] ?? 0);
 if (!$id) {
     setFlash('error', 'Invalid course ID.');
-    header('Location: ' . BASE_URL . '/admin/courses/list.php');
+    header('Location: ' . ($returnUrl ?: (BASE_URL . '/admin/courses/list.php')));
     exit;
 }
 
-// Fetch course to confirm existence
-$stmt = $pdo->prepare("SELECT subject_name, course_code FROM courses WHERE id = ?");
+// Fetch course to confirm existence and preserve program & semester
+$stmt = $pdo->prepare("SELECT subject_name, course_code, program, semester, semester_number FROM courses WHERE id = ?");
 $stmt->execute([$id]);
 $course = $stmt->fetch();
 
 if (!$course) {
     setFlash('error', 'Course not found or already deleted.');
-    header('Location: ' . BASE_URL . '/admin/courses/list.php');
+    header('Location: ' . ($returnUrl ?: (BASE_URL . '/admin/courses/list.php')));
     exit;
 }
+
+// Build fallback redirect preserving program & semester
+$fallbackRedirect = BASE_URL . '/admin/courses/list.php?program=' . urlencode($course['program']) . ($course['semester_number'] ? '&sem=' . $course['semester_number'] . '#sem-' . $course['semester_number'] : '');
+$finalRedirect = $returnUrl ?: $fallbackRedirect;
 
 // Check if lectures have been logged for this course
 $lecCheck = $pdo->prepare("SELECT COUNT(*) FROM lecture_entries WHERE course_id = ?");
@@ -37,7 +43,7 @@ $lectureCount = (int)$lecCheck->fetchColumn();
 
 if ($lectureCount > 0) {
     setFlash('error', "Cannot delete \"{$course['subject_name']}\" because {$lectureCount} lecture session(s) are recorded under it. Delete or reassign those sessions first.");
-    header('Location: ' . BASE_URL . '/admin/courses/list.php');
+    header('Location: ' . $finalRedirect);
     exit;
 }
 
@@ -50,7 +56,7 @@ try {
     $del->execute([$id]);
     $pdo->commit();
 
-    setFlash('success', "Course \"{$course['subject_name']}\" deleted successfully.");
+    setFlash('success', "Subject \"{$course['subject_name']}\" deleted successfully.");
 } catch (PDOException $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
@@ -58,5 +64,5 @@ try {
     setFlash('error', 'Failed to delete course: ' . $e->getMessage());
 }
 
-header('Location: ' . BASE_URL . '/admin/courses/list.php');
+header('Location: ' . $finalRedirect);
 exit;
