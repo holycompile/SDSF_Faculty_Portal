@@ -6,7 +6,7 @@ require_once ROOT . '/includes/helpers.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 requireFaculty();
 
-$facultyId = getFacultyId();
+$facultyId = getFacultyId() ?? (int)($_SESSION['faculty_id'] ?? 0);
 $facultyName = $_SESSION['faculty_name'] ?? 'Faculty Member';
 
 // Fetch faculty rates

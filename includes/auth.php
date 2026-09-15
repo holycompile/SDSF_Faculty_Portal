@@ -27,6 +27,11 @@ function requireFaculty() {
     }
 }
 
+function getFacultyId(): ?int {
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    return isset($_SESSION['faculty_id']) ? (int)$_SESSION['faculty_id'] : null;
+}
+
 function getRate(string $classType, ?float $customTheory = null, ?float $customPractical = null): float {
     if ($classType === 'T') {
         return ($customTheory !== null && $customTheory > 0) ? $customTheory : (float)THEORY_RATE;
