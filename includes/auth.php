@@ -27,6 +27,16 @@ function requireFaculty() {
     }
 }
 
+function isAdminLoggedIn(): bool {
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    return !empty($_SESSION['admin_username']);
+}
+
+function isFacultyLoggedIn(): bool {
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    return !empty($_SESSION['faculty_id']);
+}
+
 function getFacultyId(): ?int {
     if (session_status() === PHP_SESSION_NONE) session_start();
     return isset($_SESSION['faculty_id']) ? (int)$_SESSION['faculty_id'] : null;
