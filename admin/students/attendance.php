@@ -1,5 +1,5 @@
 <?php
-define('ROOT', dirname(dirname(dirname(__FILE__))));
+if (!defined('ROOT')) define('ROOT', dirname(dirname(dirname(__FILE__))));
 require_once ROOT . '/includes/auth.php';
 require_once ROOT . '/includes/db.php';
 require_once ROOT . '/includes/helpers.php';
@@ -62,7 +62,7 @@ $curriculumCourses = $cStmt->fetchAll(PDO::FETCH_ASSOC);
 // Pre-load cohort attendance matrix for each curriculum course
 $adminCourseMatrices = [];
 foreach ($curriculumCourses as $cc) {
-    $pName = $cc['program_name'] ?? $currentProgram['program_name'];
+    $pName = $cc['program_name'] ?? ($currentProgram['program_name'] ?? '');
     $matrix = getCohortAttendanceMatrix($pdo, $pName, $cc['semester'], (int)$cc['id']);
     $adminCourseMatrices[$cc['id']] = $matrix;
 }
@@ -206,7 +206,7 @@ $active_nav = 'students-attendance';
                     $mat = $adminCourseMatrices[$cc['id']] ?? null;
                     $cStudents = $mat['students'] ?? [];
                     $attCols = $mat['attendance_cols'] ?? [];
-                    $tblName = $mat['table_name'] ?? getCohortStudentTable($cc['program_name'] ?? $currentProgram['program_name'], $cc['semester']);
+                    $tblName = $mat['table_name'] ?? getCohortStudentTable($cc['program_name'] ?? ($currentProgram['program_name'] ?? ''), $cc['semester']);
                     $avgPct  = $mat['avg_attendance'] ?? 0;
                 ?>
                 <div class="card fade-up" style="margin-bottom:26px;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.03);" id="admin-card-<?= $cc['id'] ?>">
@@ -252,7 +252,7 @@ $active_nav = 'students-attendance';
                             <span class="badge <?= $avgPct >= 75 ? 'badge-green' : ($avgPct >= 50 ? 'badge-yellow' : 'badge-red') ?>" style="font-size:12px;padding:5px 12px;">
                                 Avg: <?= $avgPct ?>%
                             </span>
-                            <a href="<?= BASE_URL ?>/admin/courses/list.php?program=<?= urlencode($cc['program_name'] ?? $currentProgram['program_name']) ?>" class="btn btn-outline btn-sm" style="font-size:12px;padding:5px 12px;">
+                            <a href="<?= BASE_URL ?>/admin/courses/list.php?program=<?= urlencode($cc['program_name'] ?? ($currentProgram['program_name'] ?? '')) ?>" class="btn btn-outline btn-sm" style="font-size:12px;padding:5px 12px;">
                                 View in Curriculum
                             </a>
                         </div>
@@ -544,7 +544,7 @@ $active_nav = 'students-attendance';
             </button>
         </div>
 
-        <div style="padding:14px 24px;background:#eef2ff;border-bottom:1px solid #e0e7ff;display:flex;align-items:center;justify-content:space-between;flex-wrap:gap:10px;">
+        <div style="padding:14px 24px;background:#eef2ff;border-bottom:1px solid #e0e7ff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
             <div style="display:flex;gap:10px;font-size:13px;font-weight:600;">
                 <span style="color:#475569;">Total: <strong id="modalTotal" style="color:#0f172a;">0</strong></span>
                 <span style="color:#047857;">&#10003; Present: <strong id="modalPresent">0</strong></span>
