@@ -358,6 +358,59 @@ $active_nav = 'students-list';
     justify-content: center;
     padding: 20px;
 }
+/* Multi-select & Bulk Delete Styles */
+.bulk-action-bar {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(120%);
+    z-index: 9990;
+    background: #0f172a;
+    color: #ffffff;
+    padding: 12px 22px;
+    border-radius: 16px;
+    box-shadow: 0 20px 45px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
+    opacity: 0;
+    pointer-events: none;
+    max-width: 95vw;
+    flex-wrap: wrap;
+}
+.bulk-action-bar.visible {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+.bulk-count-badge {
+    background: #3b82f6;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 3px 11px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+}
+tr.student-row.row-selected {
+    background-color: #f0f9ff !important;
+}
+tr.student-row.row-selected td {
+    background-color: #f0f9ff !important;
+}
+input[type="checkbox"].student-cb,
+input[type="checkbox"].cohort-select-all {
+    width: 17px;
+    height: 17px;
+    border-radius: 4px;
+    accent-color: #2563eb;
+    cursor: pointer;
+    vertical-align: middle;
+}
 </style>
 </head>
 <body>
@@ -458,13 +511,24 @@ $active_nav = 'students-list';
             <?php endfor; ?>
         </div>
 
-        <!-- Search Bar -->
+        <!-- Search & Selection Controls -->
         <div class="card fade-up" style="margin-bottom:20px;padding:12px 18px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" id="studentSearch" placeholder="Search students across all tables by name or roll no (e.g. dummy1, r-1)..."
-                       oninput="searchStudents()"
-                       style="border:none;outline:none;font-size:14px;width:100%;background:transparent;color:#0f172a;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:260px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="studentSearch" placeholder="Search students across all cohorts by name, roll no, or enrollment no..."
+                           oninput="searchStudents()"
+                           style="border:none;outline:none;font-size:14px;width:100%;background:transparent;color:#0f172a;">
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="selectAllVisibleStudents(true)" style="font-size:12px;padding:5px 12px;display:inline-flex;align-items:center;gap:6px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        Select All Visible
+                    </button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="clearAllSelections()" style="font-size:12px;padding:5px 12px;">
+                        Clear Selection
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -509,6 +573,11 @@ $active_nav = 'students-list';
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <?php if (!empty($semStudents)): ?>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="selectCohortOnly(<?= $semNum ?>)" title="Select all students in <?= htmlspecialchars($semName) ?>" style="font-size:12px;padding:4px 10px;">
+                            Select All (<?= count($semStudents) ?>)
+                        </button>
+                    <?php endif; ?>
                     <button type="button" class="btn btn-outline btn-sm" onclick="openQuickAddModal('<?= $progId ?>', '<?= htmlspecialchars(addslashes($semName)) ?>')">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         + Add Student to <?= htmlspecialchars($semName) ?>
@@ -534,6 +603,9 @@ $active_nav = 'students-list';
                 <table class="dt student-data-table">
                     <thead>
                         <tr>
+                            <th style="width:38px;text-align:center;">
+                                <input type="checkbox" class="cohort-select-all" data-sem="<?= $semNum ?>" onchange="toggleCohortSelect(this, <?= $semNum ?>)" title="Select all in <?= htmlspecialchars($semName) ?>">
+                            </th>
                             <th style="width:45px;">#</th>
                             <th style="width:90px;">Roll No</th>
                             <th>Student Name</th>
@@ -564,6 +636,9 @@ $active_nav = 'students-list';
                             data-roll="<?= strtolower(htmlspecialchars($st['roll_no'])) ?>"
                             data-enroll="<?= strtolower(htmlspecialchars($st['enrollment_no'] ?? '')) ?>"
                             data-status="<?= htmlspecialchars($st['status']) ?>">
+                            <td style="text-align:center;">
+                                <input type="checkbox" class="student-cb sem-cb-<?= $semNum ?>" value="<?= $st['id'] ?>" data-name="<?= htmlspecialchars($st['student_name'], ENT_QUOTES) ?>" data-roll="<?= htmlspecialchars($st['roll_no'], ENT_QUOTES) ?>" data-sem="<?= $semNum ?>" onchange="onStudentSelectChange(this)">
+                            </td>
                             <td style="color:#94a3b8;font-size:12px;"><?= $sIdx + 1 ?></td>
                             <td>
                                 <span class="roll-avatar"><?= htmlspecialchars($st['roll_no']) ?></span>
@@ -744,26 +819,236 @@ $active_nav = 'students-list';
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
+<!-- Floating Bulk Action Bar -->
+<div id="bulkActionBar" class="bulk-action-bar">
+    <div style="display:flex;align-items:center;gap:12px;">
+        <span class="bulk-count-badge" id="bulkSelectedCount">0</span>
+        <div style="line-height:1.2;">
+            <div style="font-size:13.5px;font-weight:700;color:#f8fafc;">Students Selected</div>
+            <div style="font-size:11.5px;color:#94a3b8;" id="bulkSelectedSubtitle">Ready for multiple deletion</div>
+        </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-sm" onclick="selectAllVisibleStudents(true)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;font-size:12px;padding:6px 12px;border-radius:8px;font-weight:600;">
+            Select All Visible
+        </button>
+        <button type="button" class="btn btn-sm" onclick="clearAllSelections()" style="background:#1e293b;color:#cbd5e1;border:1px solid #475569;font-size:12px;padding:6px 12px;border-radius:8px;font-weight:600;">
+            Clear Selection
+        </button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="openBulkDeleteModal()" style="font-size:12.5px;font-weight:700;padding:6px 15px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 14px rgba(220,38,38,0.4);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            Delete (<span id="bulkDelBtnCount">0</span>) Selected
+        </button>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal (Handles Both Single and Multiple Bulk Delete) -->
 <div id="deleteModal" class="modal-overlay">
-    <div style="background:#fff;border-radius:20px;max-width:440px;width:95%;padding:28px;box-shadow:0 20px 40px rgba(0,0,0,0.2);animation:fadeUp .2s ease both;">
+    <div style="background:#fff;border-radius:20px;max-width:480px;width:95%;padding:28px;box-shadow:0 20px 40px rgba(0,0,0,0.22);animation:fadeUp .2s ease both;">
         <div style="width:48px;height:48px;border-radius:12px;background:#fef2f2;border:1.5px solid #fecaca;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </div>
-        <h3 style="font-size:18px;font-weight:800;color:#0f172a;text-align:center;margin:0 0 6px;">Delete Student Record</h3>
-        <p style="font-size:13.5px;color:#64748b;text-align:center;margin:0 0 20px;" id="delPrompt">Are you sure you want to delete this student?</p>
+        <h3 style="font-size:18px;font-weight:800;color:#0f172a;text-align:center;margin:0 0 6px;" id="delModalTitle">Delete Student Record</h3>
+        <p style="font-size:13.5px;color:#64748b;text-align:center;margin:0 0 16px;" id="delPrompt">Are you sure you want to delete this student?</p>
+        
+        <div id="delPreviewContainer" style="display:none;margin-bottom:18px;"></div>
+
         <form method="POST" action="<?= BASE_URL ?>/admin/students/delete.php">
             <input type="hidden" name="id" id="delStudentId" value="">
+            <input type="hidden" name="ids" id="delStudentIds" value="">
             <input type="hidden" name="return_url" value="<?= htmlspecialchars($_SERVER['REQUEST_URI']) ?>">
             <div style="display:flex;justify-content:center;gap:12px;">
                 <button type="button" class="btn btn-outline" onclick="closeDeleteModal()">Cancel</button>
-                <button type="submit" class="btn btn-danger">Confirm Delete</button>
+                <button type="submit" class="btn btn-danger" id="delConfirmBtn">Confirm Delete</button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
+// State management for multi-selected students
+const selectedStudents = new Map(); // id => { name, roll, sem }
+
+function onStudentSelectChange(cb) {
+    const row = cb.closest('tr');
+    const id = cb.value;
+    const name = cb.getAttribute('data-name') || '';
+    const roll = cb.getAttribute('data-roll') || '';
+    const sem = cb.getAttribute('data-sem') || '';
+
+    if (cb.checked) {
+        selectedStudents.set(id, { name, roll, sem });
+        if (row) row.classList.add('row-selected');
+    } else {
+        selectedStudents.delete(id);
+        if (row) row.classList.remove('row-selected');
+    }
+    updateBulkBar();
+    updateCohortSelectAllState();
+}
+
+function toggleCohortSelect(headerCb, semNum) {
+    const isChecked = headerCb.checked;
+    const semCbs = document.querySelectorAll(`.sem-cb-${semNum}`);
+    semCbs.forEach(cb => {
+        const row = cb.closest('tr');
+        if (row && row.style.display !== 'none') {
+            cb.checked = isChecked;
+            const id = cb.value;
+            const name = cb.getAttribute('data-name') || '';
+            const roll = cb.getAttribute('data-roll') || '';
+            if (isChecked) {
+                selectedStudents.set(id, { name, roll, sem: semNum });
+                row.classList.add('row-selected');
+            } else {
+                selectedStudents.delete(id);
+                row.classList.remove('row-selected');
+            }
+        }
+    });
+    updateBulkBar();
+    updateCohortSelectAllState();
+}
+
+function selectCohortOnly(semNum) {
+    const semCbs = document.querySelectorAll(`.sem-cb-${semNum}`);
+    // If all are already checked, uncheck all. Otherwise, check all.
+    const visibleCbs = Array.from(semCbs).filter(cb => {
+        const r = cb.closest('tr');
+        return r && r.style.display !== 'none';
+    });
+    const allChecked = visibleCbs.length > 0 && visibleCbs.every(cb => cb.checked);
+    const targetState = !allChecked;
+
+    visibleCbs.forEach(cb => {
+        cb.checked = targetState;
+        const row = cb.closest('tr');
+        const id = cb.value;
+        const name = cb.getAttribute('data-name') || '';
+        const roll = cb.getAttribute('data-roll') || '';
+        if (targetState) {
+            selectedStudents.set(id, { name, roll, sem: semNum });
+            if (row) row.classList.add('row-selected');
+        } else {
+            selectedStudents.delete(id);
+            if (row) row.classList.remove('row-selected');
+        }
+    });
+
+    const headerCb = document.querySelector(`.cohort-select-all[data-sem="${semNum}"]`);
+    if (headerCb) {
+        headerCb.checked = targetState;
+        headerCb.indeterminate = false;
+    }
+    updateBulkBar();
+    updateCohortSelectAllState();
+}
+
+function selectAllVisibleStudents(select) {
+    const rows = document.querySelectorAll('.student-data-table tbody tr.student-row');
+    rows.forEach(r => {
+        if (r.style.display !== 'none') {
+            const cb = r.querySelector('.student-cb');
+            if (cb) {
+                cb.checked = select;
+                const id = cb.value;
+                const name = cb.getAttribute('data-name') || '';
+                const roll = cb.getAttribute('data-roll') || '';
+                const sem = cb.getAttribute('data-sem') || '';
+                if (select) {
+                    selectedStudents.set(id, { name, roll, sem });
+                    r.classList.add('row-selected');
+                } else {
+                    selectedStudents.delete(id);
+                    r.classList.remove('row-selected');
+                }
+            }
+        }
+    });
+    updateBulkBar();
+    updateCohortSelectAllState();
+}
+
+function clearAllSelections() {
+    selectedStudents.clear();
+    document.querySelectorAll('.student-cb').forEach(cb => {
+        cb.checked = false;
+        const r = cb.closest('tr');
+        if (r) r.classList.remove('row-selected');
+    });
+    document.querySelectorAll('.cohort-select-all').forEach(cb => {
+        cb.checked = false;
+        cb.indeterminate = false;
+    });
+    updateBulkBar();
+}
+
+function updateCohortSelectAllState() {
+    document.querySelectorAll('.cohort-select-all').forEach(headerCb => {
+        const sem = headerCb.getAttribute('data-sem');
+        const cbs = Array.from(document.querySelectorAll(`.sem-cb-${sem}`)).filter(c => {
+            const r = c.closest('tr');
+            return r && r.style.display !== 'none';
+        });
+        if (cbs.length > 0) {
+            const checkedCount = cbs.filter(c => c.checked).length;
+            headerCb.checked = (checkedCount === cbs.length);
+            headerCb.indeterminate = (checkedCount > 0 && checkedCount < cbs.length);
+        } else {
+            headerCb.checked = false;
+            headerCb.indeterminate = false;
+        }
+    });
+}
+
+function updateBulkBar() {
+    const bar = document.getElementById('bulkActionBar');
+    const count = selectedStudents.size;
+    const countEl = document.getElementById('bulkSelectedCount');
+    const btnCountEl = document.getElementById('bulkDelBtnCount');
+    const subtitleEl = document.getElementById('bulkSelectedSubtitle');
+
+    if (countEl) countEl.innerText = count;
+    if (btnCountEl) btnCountEl.innerText = count;
+    if (subtitleEl) subtitleEl.innerText = `${count} student${count === 1 ? '' : 's'} ready for bulk actions`;
+
+    if (count > 0) {
+        bar.classList.add('visible');
+    } else {
+        bar.classList.remove('visible');
+    }
+}
+
+function openBulkDeleteModal() {
+    if (selectedStudents.size === 0) return;
+    const count = selectedStudents.size;
+    const ids = Array.from(selectedStudents.keys());
+
+    document.getElementById('delStudentId').value = '';
+    document.getElementById('delStudentIds').value = ids.join(',');
+
+    document.getElementById('delModalTitle').innerText = `Delete ${count} Selected Students`;
+    document.getElementById('delPrompt').innerHTML = `Are you sure you want to permanently delete <strong>${count} selected student${count === 1 ? '' : 's'}</strong> at once? This will remove them from the roster, dedicated cohort tables, and any linked attendance logs.`;
+
+    let previewHtml = '<div style="max-height:160px;overflow-y:auto;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;text-align:left;">';
+    previewHtml += `<div style="font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Selected Students List (${count}):</div>`;
+    selectedStudents.forEach((st) => {
+        previewHtml += `<div style="font-size:12.5px;color:#0f172a;padding:4px 0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px dashed #e2e8f0;">
+            <span><strong style="font-family:monospace;background:#eef2ff;color:#4338ca;padding:1px 6px;border-radius:4px;font-size:11.5px;margin-right:6px;">${st.roll}</strong> ${st.name}</span>
+            <span style="font-size:11px;color:#64748b;font-weight:600;">Sem ${st.sem || ''}</span>
+        </div>`;
+    });
+    previewHtml += '</div>';
+
+    const container = document.getElementById('delPreviewContainer');
+    container.innerHTML = previewHtml;
+    container.style.display = 'block';
+
+    const confirmBtn = document.getElementById('delConfirmBtn');
+    confirmBtn.innerText = `Delete ${count} Student${count === 1 ? '' : 's'}`;
+    document.getElementById('deleteModal').style.display = 'flex';
+}
+
 function searchStudents() {
     const q = document.getElementById('studentSearch').value.trim().toLowerCase();
     const rows = document.querySelectorAll('.student-data-table tbody tr');
@@ -777,6 +1062,7 @@ function searchStudents() {
             r.style.display = 'none';
         }
     });
+    updateCohortSelectAllState();
 }
 
 function openQuickAddModal(programId, semester) {
@@ -809,7 +1095,12 @@ function closeQuickEditModal() {
 
 function confirmDelete(id, name, roll) {
     document.getElementById('delStudentId').value = id;
+    document.getElementById('delStudentIds').value = '';
+    document.getElementById('delModalTitle').innerText = 'Delete Student Record';
     document.getElementById('delPrompt').innerHTML = `Are you sure you want to remove <strong>${name}</strong> (Roll: ${roll})? Any past attendance links for this student will also be removed.`;
+    document.getElementById('delPreviewContainer').innerHTML = '';
+    document.getElementById('delPreviewContainer').style.display = 'none';
+    document.getElementById('delConfirmBtn').innerText = 'Confirm Delete';
     document.getElementById('deleteModal').style.display = 'flex';
 }
 

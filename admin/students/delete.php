@@ -11,35 +11,64 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$id = (int)($_POST['id'] ?? 0);
+// Collect IDs for deletion (supports both single 'id' and bulk 'ids')
+$ids = [];
+$rawIds = $_POST['ids'] ?? [];
+
+if (is_array($rawIds)) {
+    foreach ($rawIds as $v) {
+        $vInt = (int)$v;
+        if ($vInt > 0) $ids[] = $vInt;
+    }
+} elseif (is_string($rawIds) && trim($rawIds) !== '') {
+    foreach (explode(',', $rawIds) as $v) {
+        $vInt = (int)trim($v);
+        if ($vInt > 0) $ids[] = $vInt;
+    }
+}
+
+$singleId = (int)($_POST['id'] ?? 0);
+if ($singleId > 0 && !in_array($singleId, $ids)) {
+    $ids[] = $singleId;
+}
+
+$ids = array_values(array_unique($ids));
 $returnUrl = $_POST['return_url'] ?? (BASE_URL . '/admin/students/index.php');
 
-if ($id > 0) {
+if (!empty($ids)) {
     try {
-        $stmt = $pdo->prepare("
-            SELECT s.student_name, s.roll_no, s.current_semester, ap.program_name
+        $inClause = implode(',', array_map('intval', $ids));
+        $stmt = $pdo->query("
+            SELECT s.id, s.student_name, s.roll_no, s.current_semester, ap.program_name
             FROM students s
             JOIN academic_programs ap ON ap.id = s.program_id
-            WHERE s.id = ?
+            WHERE s.id IN ({$inClause})
         ");
-        $stmt->execute([$id]);
-        $stData = $stmt->fetch(PDO::FETCH_ASSOC);
-        $name = $stData['student_name'] ?? 'record';
+        $studentsToDelete = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        if ($stData) {
+        // Delete from corresponding dedicated cohort physical tables
+        foreach ($studentsToDelete as $stData) {
             $dedTbl = getCohortStudentTable($stData['program_name'], $stData['current_semester']);
             try {
                 $pdo->exec("DELETE FROM `{$dedTbl}` WHERE roll_no = " . $pdo->quote($stData['roll_no']));
             } catch (Exception $e) {}
         }
 
-        $del = $pdo->prepare("DELETE FROM students WHERE id = ?");
-        $del->execute([$id]);
+        // Delete from main students table (cascades to student_attendance)
+        $del = $pdo->exec("DELETE FROM students WHERE id IN ({$inClause})");
 
-        setFlash('success', "Student <strong>" . htmlspecialchars($name) . "</strong> has been removed.");
+        $count = count($studentsToDelete);
+        if ($count === 1) {
+            $name = $studentsToDelete[0]['student_name'] ?? 'record';
+            setFlash('success', "Student <strong>" . htmlspecialchars($name) . "</strong> has been removed.");
+        } else {
+            setFlash('success', "Successfully removed <strong>{$count}</strong> selected students and updated cohort rosters.");
+        }
     } catch (PDOException $e) {
-        setFlash('error', "Could not delete student: " . $e->getMessage());
+        setFlash('error', "Could not delete selected student(s): " . $e->getMessage());
     }
+} else {
+    setFlash('error', "No valid students were selected for deletion.");
 }
 
 header('Location: ' . $returnUrl);
