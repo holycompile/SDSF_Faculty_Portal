@@ -91,11 +91,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $presentCount++;
                     }
                 }
-
-                // Record into dedicated physical cohort table as dynamic date column with 1 (present) and 0 (absent)
-                $progName = $matchedCourse['prog_title'] ?? $matchedCourse['program'];
-                $semName  = $matchedCourse['semester'];
-                recordCohortAttendance($pdo, $progName, $semName, $lectureDate, $attendanceData, $lectureId, (int)$courseId);
             }
 
             // Calculate monthly total to check 30,000 threshold
@@ -108,7 +103,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mStmt->execute([$facultyId, $month, $year]);
             $monthTotal = (float)$mStmt->fetchColumn();
 
-            $pdo->commit();
+            // Commit core lecture entry and student attendance transaction cleanly
+            if ($pdo->inTransaction()) {
+                $pdo->commit();
+            }
+
+            // Record into dedicated physical cohort table as dynamic date column with 1 (present) and 0 (absent)
+            if (!empty($attendanceData) && is_array($attendanceData)) {
+                $progName = $matchedCourse['prog_title'] ?? $matchedCourse['program'];
+                $semName  = $matchedCourse['semester'];
+                try {
+                    recordCohortAttendance($pdo, $progName, $semName, $lectureDate, $attendanceData, $lectureId, (int)$courseId);
+                } catch (Exception $e) {
+                    error_log("Cohort attendance recording error: " . $e->getMessage());
+                }
+            }
 
             $attMsg = "";
             if ($totalMarked > 0) {

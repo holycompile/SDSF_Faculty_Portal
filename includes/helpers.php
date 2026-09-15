@@ -140,6 +140,11 @@ function recordCohortAttendance(
     ?int $lectureId = null,
     ?int $courseId = null
 ): string {
+    // If a transaction is active, commit it before running DDL (ALTER TABLE causes implicit commit in MySQL)
+    if ($pdo->inTransaction()) {
+        $pdo->commit();
+    }
+
     $table = getCohortStudentTable($progName, $semester);
 
     // Verify table exists
