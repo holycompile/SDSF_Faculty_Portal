@@ -62,14 +62,20 @@ $tagStmt->execute([$progId]);
 $semesterYearTags = $tagStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
 // Fetch student counts per semester for this program
-$stCountStmt = $pdo->prepare("
-    SELECT current_semester, COUNT(*) AS count
-    FROM students
-    WHERE program_id = ? AND status = 'active'
-    GROUP BY current_semester
-");
-$stCountStmt->execute([$progId]);
-$semStudentCounts = $stCountStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+$semStudentCounts = [];
+try {
+    $stCountStmt = $pdo->prepare("
+        SELECT current_semester, COUNT(*) AS count
+        FROM students
+        WHERE program_id = ? AND status = 'active'
+        GROUP BY current_semester
+    ");
+    $stCountStmt->execute([$progId]);
+    $semStudentCounts = $stCountStmt->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+} catch (PDOException $e) {
+    // Graceful fallback if table is not yet migrated
+    $semStudentCounts = [];
+}
 
 // Group courses by semester
 $coursesBySemester = [];
