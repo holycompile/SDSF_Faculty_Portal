@@ -130,6 +130,9 @@ $progName   = $selectedProgram['program_name'];
 $batchYear  = $selectedProgram['batch_year'];
 $totalSems  = (int)$selectedProgram['total_semesters'];
 
+// Fetch course lookup for column tagging
+$allCoursesLookup = $pdo->query("SELECT id, course_code, subject_name FROM courses")->fetchAll(PDO::FETCH_UNIQUE | PDO::FETCH_ASSOC);
+
 // Check optional course context
 $courseId = (int)($_GET['course_id'] ?? 0);
 $selectedCourse = null;
@@ -614,13 +617,26 @@ input[type="checkbox"].cohort-select-all {
                             <th style="width:100px;">Status</th>
                             <?php foreach ($attCols as $cCol): 
                                 $dStr = str_replace('att_', '', $cCol);
-                                $dParts = explode('_', $dStr);
-                                $colLabel = $dStr;
-                                if (count($dParts) >= 3) {
-                                    $colLabel = $dParts[2] . '/' . $dParts[1];
+                                $courseTag = '';
+                                $courseTitle = '';
+                                if (preg_match('/^c(\d+)_(.*)$/', $dStr, $m)) {
+                                    $cid = (int)$m[1];
+                                    $dStr = $m[2];
+                                    if (isset($allCoursesLookup[$cid])) {
+                                        $courseTag = $allCoursesLookup[$cid]['course_code'];
+                                        $courseTitle = $allCoursesLookup[$cid]['subject_name'];
+                                    }
                                 }
+                                $isSession2 = str_contains($dStr, '_s2');
+                                $dClean = preg_replace('/_s\d+$/', '', $dStr);
+                                $dParts = explode('_', $dClean);
+                                $colLabel = (count($dParts) >= 3) ? ($dParts[2] . '/' . $dParts[1]) : $dClean;
+                                if ($isSession2) $colLabel .= ' (S2)';
                             ?>
-                                <th style="width:85px;text-align:center;background:#f0f9ff;border-left:1px solid #e0f2fe;" title="Attendance Date: <?= htmlspecialchars($dStr) ?> (Dedicated Table Column: <?= htmlspecialchars($cCol) ?>)">
+                                <th style="width:90px;text-align:center;background:#f0f9ff;border-left:1px solid #e0f2fe;" title="<?= htmlspecialchars($courseTitle ? ($courseTitle . ' (' . $courseTag . ') on ' . $dClean) : ('Attendance Date: ' . $dClean)) ?> (Column: <?= htmlspecialchars($cCol) ?>)">
+                                    <?php if ($courseTag): ?>
+                                        <div style="font-size:9.5px;font-weight:700;color:#0284c7;background:#e0f2fe;padding:1px 4px;border-radius:4px;margin-bottom:2px;display:inline-block;white-space:nowrap;"><?= htmlspecialchars($courseTag) ?></div>
+                                    <?php endif; ?>
                                     <div style="font-size:11px;font-weight:800;color:#0369a1;"><?= htmlspecialchars($colLabel) ?></div>
                                     <div style="font-size:9px;color:#0284c7;font-weight:600;">(0 or 1)</div>
                                 </th>

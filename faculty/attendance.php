@@ -353,10 +353,13 @@ $active_nav = 'attendance';
                                         <?php else: ?>
                                             <?php foreach ($attCols as $col): 
                                                 $d = str_replace('att_', '', $col);
-                                                // Remove optional course suffix if present (e.g. _c84)
-                                                $dClean = preg_replace('/_c\d+$/', '', $d);
+                                                $dClean = preg_replace('/^c\d+_/', '', $d);
+                                                $dClean = preg_replace('/_c\d+$/', '', $dClean);
+                                                $isSession2 = str_contains($dClean, '_s2');
+                                                $dClean = preg_replace('/_s\d+$/', '', $dClean);
                                                 $parts = explode('_', $dClean);
-                                                $label = (count($parts) >= 3) ? ($parts[2] . '/' . $parts[1] . '/' . substr($parts[0], 2)) : $dClean;
+                                                $label = (count($parts) >= 3) ? ($parts[2] . '/' . $parts[1]) : $dClean;
+                                                if ($isSession2) $label .= ' (S2)';
                                             ?>
                                                 <th style="width:80px;text-align:center;background:#f0f9ff;border-left:1px solid #e0f2fe;" title="Session Date: <?= htmlspecialchars($dClean) ?> (Column: <?= htmlspecialchars($col) ?>)">
                                                     <div style="font-size:11px;font-weight:800;color:#0369a1;"><?= htmlspecialchars($label) ?></div>

@@ -157,9 +157,9 @@ function recordCohortAttendance(
         return '';
     }
 
-    // Format target column name per Option 2 (e.g. att_2026_09_15)
+    // Format target column name per Course-Scoped Session Naming (e.g. att_c96_2026_09_15)
     $datePart = date('Y_m_d', strtotime($date));
-    $baseCol = "att_{$datePart}";
+    $baseCol = $courseId ? "att_c{$courseId}_{$datePart}" : "att_{$datePart}";
     $targetCol = $baseCol;
 
     try {
@@ -170,16 +170,16 @@ function recordCohortAttendance(
             $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$baseCol}` TINYINT(1) NOT NULL DEFAULT 0");
             $targetCol = $baseCol;
         } else {
-            // Check if there is collision with another course lecture on the same date
+            // Check if there is collision with another session of this same course on the same date
             if ($courseId && $lectureId) {
                 $otherLec = $pdo->prepare("
                     SELECT id FROM lecture_entries 
-                    WHERE lecture_date = ? AND id != ? AND course_id != ? 
+                    WHERE lecture_date = ? AND id != ? AND course_id = ? 
                     LIMIT 1
                 ");
                 $otherLec->execute([$date, $lectureId, $courseId]);
                 if ($otherLec->fetchColumn()) {
-                    $candCol = "att_{$datePart}_c{$courseId}";
+                    $candCol = "{$baseCol}_s2";
                     if (!in_array($candCol, $cols)) {
                         $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$candCol}` TINYINT(1) NOT NULL DEFAULT 0");
                     }
@@ -243,13 +243,31 @@ function getCohortAttendanceMatrix(PDO $pdo, string $progName, $semester, ?int $
         $attCols = [];
 
         if ($courseId) {
-            $courseSpecificPrefix = "_c{$courseId}";
+            $coursePrefix = "att_c{$courseId}_";
+            // Check lecture_entries for this specific course to also map any legacy date columns (e.g. att_2026_09_15)
+            $lecDatesStmt = $pdo->prepare("SELECT DISTINCT lecture_date FROM lecture_entries WHERE course_id = ?");
+            $lecDatesStmt->execute([$courseId]);
+            $courseLecDates = $lecDatesStmt->fetchAll(PDO::FETCH_COLUMN);
+            $legacyMappedCols = [];
+            foreach ($courseLecDates as $ld) {
+                $legacyMappedCols[] = "att_" . date('Y_m_d', strtotime($ld));
+            }
+
+            // Deduplicate so each session date appears exactly once (preferring att_c{cid}_{date})
+            $dateColMap = [];
             foreach ($allCols as $col) {
-                // If column has specific course suffix or is a general date column
-                if (str_ends_with($col, $courseSpecificPrefix) || !preg_match('/_c\d+$/', $col)) {
-                    $attCols[] = $col;
+                if (str_starts_with($col, $coursePrefix) || str_ends_with($col, "_c{$courseId}")) {
+                    $dKey = preg_replace('/^att_c\d+_/', '', $col);
+                    $dKey = preg_replace('/_c\d+$/', '', $dKey);
+                    $dateColMap[$dKey] = $col;
+                } elseif (in_array($col, $legacyMappedCols)) {
+                    $dKey = str_replace('att_', '', $col);
+                    if (!isset($dateColMap[$dKey])) {
+                        $dateColMap[$dKey] = $col;
+                    }
                 }
             }
+            $attCols = array_values($dateColMap);
         } else {
             $attCols = $allCols;
         }
