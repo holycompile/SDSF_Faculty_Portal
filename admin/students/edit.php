@@ -66,6 +66,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $upd->execute([$programId, $batchYear, $semester, $rollNo, $enrollNo, $name, $status, $id]);
 
+            // Also update dedicated physical table
+            $dedTbl = getCohortStudentTable($progData['program_name'], $semester);
+            try {
+                $dUpd = $pdo->prepare("
+                    UPDATE `{$dedTbl}`
+                    SET student_name = ?, roll_no = ?, enrollment_no = ?, batch_year = ?, status = ?
+                    WHERE roll_no = ?
+                ");
+                $dUpd->execute([$name, $rollNo, $enrollNo, $batchYear, $status, $student['roll_no']]);
+            } catch (Exception $e) {}
+
             setFlash('success', "Student <strong>" . htmlspecialchars($name) . "</strong> updated successfully!");
             header('Location: ' . BASE_URL . '/admin/students/index.php?program=' . urlencode($progData['program_name']) . '&semester=' . urlencode($semester));
             exit;

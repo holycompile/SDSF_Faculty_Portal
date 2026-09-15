@@ -38,6 +38,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([$pId, $batchYear, $sem, $rollNo, $enrollNo, $name, $status]);
+
+                // Also update dedicated physical table (e.g. students_mtech_aids_sem1)
+                $pRow = $pdo->query("SELECT program_name FROM academic_programs WHERE id = {$pId}")->fetch(PDO::FETCH_ASSOC);
+                if ($pRow) {
+                    $dedTbl = getCohortStudentTable($pRow['program_name'], $sem);
+                    try {
+                        $dStmt = $pdo->prepare("
+                            INSERT INTO `{$dedTbl}` (roll_no, student_name, enrollment_no, batch_year, status)
+                            VALUES (?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE student_name = VALUES(student_name), enrollment_no = VALUES(enrollment_no), status = VALUES(status)
+                        ");
+                        $dStmt->execute([$rollNo, $name, $enrollNo, $batchYear, $status]);
+                    } catch (Exception $e) {}
+                }
+
                 setFlash('success', "Student <strong>" . htmlspecialchars($name) . "</strong> (Roll: " . htmlspecialchars($rollNo) . ") successfully enrolled!");
             } catch (PDOException $e) {
                 setFlash('error', "Could not add student: " . $e->getMessage());
@@ -59,12 +74,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($id > 0 && !empty($name) && !empty($rollNo)) {
             try {
+                // Get original record to find dedicated physical table
+                $orig = $pdo->query("SELECT s.roll_no, s.current_semester, ap.program_name FROM students s JOIN academic_programs ap ON ap.id = s.program_id WHERE s.id = {$id}")->fetch(PDO::FETCH_ASSOC);
+
                 $stmt = $pdo->prepare("
                     UPDATE students
                     SET student_name = ?, roll_no = ?, enrollment_no = ?, status = ?
                     WHERE id = ?
                 ");
                 $stmt->execute([$name, $rollNo, $enrollNo, $status, $id]);
+
+                // Also update dedicated physical table
+                if ($orig) {
+                    $dedTbl = getCohortStudentTable($orig['program_name'], $orig['current_semester']);
+                    try {
+                        $dUpd = $pdo->prepare("
+                            UPDATE `{$dedTbl}`
+                            SET student_name = ?, roll_no = ?, enrollment_no = ?, status = ?
+                            WHERE roll_no = ?
+                        ");
+                        $dUpd->execute([$name, $rollNo, $enrollNo, $status, $orig['roll_no']]);
+                    } catch (Exception $e) {}
+                }
+
                 setFlash('success', "Student <strong>" . htmlspecialchars($name) . "</strong> details successfully updated!");
             } catch (PDOException $e) {
                 setFlash('error', "Could not update student: " . $e->getMessage());

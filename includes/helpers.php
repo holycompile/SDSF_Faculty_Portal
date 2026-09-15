@@ -84,3 +84,30 @@ function getFlash(): ?array {
     unset($_SESSION['flash']);
     return $f;
 }
+
+// ─── Get Dedicated Student Table Name ─────────────────────────────────────────
+function getCohortStudentTable(string $progNameOrCode, $semester): string {
+    $semNum = (int)filter_var((string)$semester, FILTER_SANITIZE_NUMBER_INT) ?: 1;
+    $norm = strtolower($progNameOrCode);
+    $norm = str_replace(['&', ' '], ['_', '_'], $norm);
+    $norm = preg_replace('/[^a-z0-9_]/', '', $norm);
+    $norm = preg_replace('/_+/', '_', $norm);
+    $norm = trim($norm, '_');
+
+    if (str_contains($norm, 'aids') || str_contains($norm, 'ai_ds')) {
+        $prefix = 'mtech_aids';
+    } elseif (str_contains($norm, 'bda')) {
+        $prefix = 'mtech_bda';
+    } elseif (str_contains($norm, 'exec')) {
+        $prefix = 'mtech_exec';
+    } elseif (str_contains($norm, 'dsa') || str_contains($norm, 'msc')) {
+        $prefix = 'msc_dsa';
+    } elseif (str_contains($norm, 'mba') || str_contains($norm, 'ba')) {
+        $prefix = 'mba_ba';
+    } elseif (str_contains($norm, 'ds')) {
+        $prefix = 'mtech_ds';
+    } else {
+        $prefix = $norm;
+    }
+    return "students_{$prefix}_sem{$semNum}";
+}

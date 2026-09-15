@@ -49,13 +49,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tagStmt = $pdo->prepare("SELECT year_tag FROM semester_tags WHERE program_id = ? AND semester_number = ?");
         $tagStmt->execute([$programId, $semNum]);
         $batchYear = $tagStmt->fetchColumn() ?: '2025-2027';
-
         try {
             $stmt = $pdo->prepare("
                 INSERT INTO students (program_id, batch_year, current_semester, roll_no, enrollment_no, student_name, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([$programId, $batchYear, $semester, $rollNo, $enrollNo, $name, $status]);
+
+            // Also insert into dedicated physical table
+            $dedTbl = getCohortStudentTable($progData['program_name'], $semester);
+            try {
+                $dStmt = $pdo->prepare("
+                    INSERT INTO `{$dedTbl}` (roll_no, student_name, enrollment_no, batch_year, status)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE student_name = VALUES(student_name), enrollment_no = VALUES(enrollment_no), status = VALUES(status)
+                ");
+                $dStmt->execute([$rollNo, $name, $enrollNo, $batchYear, $status]);
+            } catch (Exception $e) {}
 
             setFlash('success', "Student <strong>" . htmlspecialchars($name) . "</strong> added successfully to " . htmlspecialchars($progData['program_name']) . " (" . htmlspecialchars($semester) . ")!");
             header('Location: ' . BASE_URL . '/admin/students/index.php?program=' . urlencode($progData['program_name']) . '&semester=' . urlencode($semester));
