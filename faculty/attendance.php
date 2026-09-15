@@ -50,18 +50,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     exit;
 }
 
-// Fetch assigned courses for filter dropdown
+// Fetch assigned courses with full program details
 $cStmt = $pdo->prepare("
-    SELECT c.id, c.subject_name, c.course_code, c.program, c.semester
+    SELECT c.id, c.subject_name, c.course_code, c.program, c.semester, c.batch_year, c.class_type,
+           ap.program_name
     FROM courses c
     JOIN faculty_course_assignments fca ON fca.course_id = c.id
+    LEFT JOIN academic_programs ap ON ap.id = c.program_id
     WHERE fca.faculty_id = ?
-    ORDER BY c.program, c.semester, c.subject_name
+    ORDER BY c.program, c.semester_number, c.semester, c.subject_name
 ");
 $cStmt->execute([$facultyId]);
 $assignedCourses = $cStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Filters
+// Pre-load dedicated database table attendance matrix for each assigned course
+$courseMatrices = [];
+$totalStudentsAcrossCourses = 0;
+$totalSessionsAcrossCourses = 0;
+foreach ($assignedCourses as $ac) {
+    $pName = $ac['program_name'] ?? $ac['program'];
+    $matrix = getCohortAttendanceMatrix($pdo, $pName, $ac['semester'], (int)$ac['id']);
+    $courseMatrices[$ac['id']] = $matrix;
+    if ($matrix) {
+        $totalStudentsAcrossCourses += (int)$matrix['total_students'];
+        $totalSessionsAcrossCourses += (int)$matrix['total_sessions'];
+    }
+}
+
+$view = $_GET['view'] ?? 'cards';
+
+// Filters for session history logs view
 $filterCourse = (int)($_GET['course_id'] ?? 0);
 $filterMonth  = (int)($_GET['month'] ?? 0);
 $filterYear   = (int)($_GET['year'] ?? 0);
@@ -223,49 +241,235 @@ $active_nav = 'attendance';
             </div>
         </div>
 
-        <!-- Filter Bar -->
-        <div class="card" style="padding:16px 20px;margin-bottom:24px;">
-            <form method="GET" style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;">
-                <div style="flex:1;min-width:240px;">
-                    <label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;">Assigned Subject / Course</label>
-                    <select name="course_id" class="form-select" style="font-size:13.5px;padding:8px 12px;">
-                        <option value="0">-- All Assigned Courses --</option>
-                        <?php foreach ($assignedCourses as $ac): ?>
-                            <option value="<?= $ac['id'] ?>" <?= $filterCourse === (int)$ac['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($ac['program']) ?> &bull; <?= htmlspecialchars($ac['semester']) ?> &bull; <?= htmlspecialchars($ac['subject_name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+        <!-- View Mode Navigation Tabs -->
+        <div style="display:flex;gap:10px;margin-bottom:24px;border-bottom:2px solid #e2e8f0;padding-bottom:12px;flex-wrap:wrap;">
+            <a href="?view=cards" class="btn <?= $view === 'cards' ? 'btn-primary' : 'btn-outline' ?>" style="font-weight:700;display:inline-flex;align-items:center;gap:7px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Course &amp; Semester Attendance Cards (Database Tables)
+            </a>
+            <a href="?view=logs" class="btn <?= $view === 'logs' ? 'btn-primary' : 'btn-outline' ?>" style="font-weight:700;display:inline-flex;align-items:center;gap:7px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Lecture Session History Logs
+            </a>
+        </div>
 
-                <div style="width:140px;">
-                    <label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;">Month</label>
-                    <select name="month" class="form-select" style="font-size:13.5px;padding:8px 12px;">
-                        <option value="0">All Months</option>
-                        <?php for ($m = 1; $m <= 12; $m++): ?>
-                            <option value="<?= $m ?>" <?= $filterMonth === $m ? 'selected' : '' ?>><?= date('F', mktime(0, 0, 0, $m, 1)) ?></option>
-                        <?php endfor; ?>
-                    </select>
+        <?php if ($view === 'cards'): ?>
+            <!-- ============================================================== -->
+            <!-- VIEW 1: COURSE-WISE & SEMESTER-WISE DATABASE TABLE CARDS       -->
+            <!-- ============================================================== -->
+            <?php if (empty($assignedCourses)): ?>
+                <div class="card" style="padding:48px 20px;text-align:center;color:#94a3b8;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;display:block;opacity:.4"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    <div style="font-size:16px;font-weight:700;color:#334155;">No Courses Assigned</div>
+                    <p style="font-size:13.5px;color:#64748b;margin-top:4px;">You currently do not have any subjects assigned to your faculty profile.</p>
                 </div>
+            <?php else: ?>
+                <?php foreach ($assignedCourses as $ac): 
+                    $mat = $courseMatrices[$ac['id']] ?? null;
+                    $cStudents = $mat['students'] ?? [];
+                    $attCols = $mat['attendance_cols'] ?? [];
+                    $tblName = $mat['table_name'] ?? getCohortStudentTable($ac['program_name'] ?? $ac['program'], $ac['semester']);
+                    $avgPct  = $mat['avg_attendance'] ?? 0;
+                    $courseCardId = 'course-card-' . $ac['id'];
+                ?>
+                <div class="card" style="margin-bottom:26px;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.03);" id="<?= $courseCardId ?>">
+                    <!-- Card Header -->
+                    <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:18px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;">
+                        <div style="display:flex;align-items:center;gap:14px;">
+                            <div style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg, #1e3a8a, #3b82f6);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;letter-spacing:0.5px;">
+                                <?= htmlspecialchars(substr($ac['course_code'] ?? 'DS', 0, 4)) ?>
+                            </div>
+                            <div>
+                                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                    <h3 style="font-size:17px;font-weight:800;color:#0f172a;margin:0;">
+                                        <?= htmlspecialchars($ac['subject_name']) ?>
+                                    </h3>
+                                    <code style="background:#eff6ff;color:#1e40af;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;border:1px solid #bfdbfe;">
+                                        <?= htmlspecialchars($ac['course_code'] ?? '—') ?>
+                                    </code>
+                                    <span style="background:<?= $ac['class_type'] === 'P' ? '#f0fdf4' : '#f8fafc' ?>;color:<?= $ac['class_type'] === 'P' ? '#166534' : '#475569' ?>;border:1px solid <?= $ac['class_type'] === 'P' ? '#bbf7d0' : '#e2e8f0' ?>;padding:1px 8px;border-radius:6px;font-size:11.5px;font-weight:700;">
+                                        <?= $ac['class_type'] === 'P' ? 'Practical' : 'Theory' ?>
+                                    </span>
+                                </div>
+                                <div style="font-size:12.5px;color:#64748b;margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                    <span style="font-weight:700;color:#334155;"><?= htmlspecialchars($ac['program_name'] ?? $ac['program']) ?></span>
+                                    &bull;
+                                    <span style="background:#f1f5f9;color:#1e293b;font-weight:800;padding:1px 8px;border-radius:6px;border:1px solid #cbd5e1;">
+                                        <?= htmlspecialchars($ac['semester']) ?>
+                                    </span>
+                                    &bull;
+                                    <span>Database Table: <code style="color:#1e3a8a;font-weight:700;background:#eff6ff;padding:1px 6px;border-radius:4px;border:1px solid #bfdbfe;"><?= htmlspecialchars($tblName) ?></code></span>
+                                </div>
+                            </div>
+                        </div>
 
-                <div style="width:120px;">
-                    <label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;">Year</label>
-                    <select name="year" class="form-select" style="font-size:13.5px;padding:8px 12px;">
-                        <option value="0">All Years</option>
-                        <?php for ($y = date('Y'); $y >= date('Y') - 3; $y--): ?>
-                            <option value="<?= $y ?>" <?= $filterYear === $y ? 'selected' : '' ?>><?= $y ?></option>
-                        <?php endfor; ?>
-                    </select>
-                </div>
+                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                            <span class="badge badge-blue" style="font-size:12px;padding:5px 12px;">
+                                <?= count($cStudents) ?> Students
+                            </span>
+                            <span class="badge badge-green" style="font-size:12px;padding:5px 12px;">
+                                <?= count($attCols) ?> Sessions Marked
+                            </span>
+                            <span class="badge <?= $avgPct >= 75 ? 'badge-green' : ($avgPct >= 50 ? 'badge-yellow' : 'badge-red') ?>" style="font-size:12px;padding:5px 12px;">
+                                Avg: <?= $avgPct ?>%
+                            </span>
+                            <a href="<?= BASE_URL ?>/faculty/lecture_entry.php?course_id=<?= $ac['id'] ?>" class="btn btn-primary btn-sm" style="font-weight:700;">
+                                + Mark Today's Attendance
+                            </a>
+                        </div>
+                    </div>
 
-                <div>
-                    <button type="submit" class="btn btn-primary" style="padding:9px 18px;font-size:13.5px;">Filter</button>
-                    <?php if ($filterCourse || $filterMonth || $filterYear): ?>
-                        <a href="<?= BASE_URL ?>/faculty/attendance.php" class="btn btn-outline" style="padding:9px 14px;font-size:13.5px;">Reset</a>
+                    <!-- Search Filter per Card -->
+                    <div style="padding:10px 20px;background:#ffffff;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                        <div style="display:flex;align-items:center;gap:8px;flex:1;max-width:360px;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" placeholder="Search student in this table by roll or name..." 
+                                   oninput="filterCardStudents(this, 'table-course-<?= $ac['id'] ?>')"
+                                   style="font-size:12.5px;border:none;outline:none;width:100%;color:#0f172a;background:transparent;">
+                        </div>
+                        <div style="font-size:11.5px;color:#64748b;font-weight:600;">
+                            Legend: <span class="badge badge-green" style="font-size:10px;padding:1px 6px;">1</span> = Present &bull; <span class="badge badge-red" style="font-size:10px;padding:1px 6px;">0</span> = Absent &bull; <span style="color:#94a3b8;">—</span> = Unmarked
+                        </div>
+                    </div>
+
+                    <!-- Exact Database Table Matrix Body -->
+                    <?php if (empty($cStudents)): ?>
+                        <div style="padding:36px 20px;text-align:center;color:#94a3b8;">
+                            No students enrolled in this cohort yet.
+                        </div>
+                    <?php else: ?>
+                        <div style="overflow-x:auto;max-height:480px;">
+                            <table class="dt" id="table-course-<?= $ac['id'] ?>" style="margin:0;font-size:13px;width:100%;">
+                                <thead>
+                                    <tr style="background:#f8fafc;position:sticky;top:0;z-index:2;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+                                        <th style="width:40px;">#</th>
+                                        <th style="width:85px;">Roll No</th>
+                                        <th style="min-width:160px;">Student Name</th>
+                                        <th style="width:130px;">Enrollment No</th>
+                                        <?php if (empty($attCols)): ?>
+                                            <th style="text-align:center;color:#94a3b8;font-style:italic;min-width:240px;">
+                                                No attendance dates recorded yet
+                                            </th>
+                                        <?php else: ?>
+                                            <?php foreach ($attCols as $col): 
+                                                $d = str_replace('att_', '', $col);
+                                                // Remove optional course suffix if present (e.g. _c84)
+                                                $dClean = preg_replace('/_c\d+$/', '', $d);
+                                                $parts = explode('_', $dClean);
+                                                $label = (count($parts) >= 3) ? ($parts[2] . '/' . $parts[1] . '/' . substr($parts[0], 2)) : $dClean;
+                                            ?>
+                                                <th style="width:80px;text-align:center;background:#f0f9ff;border-left:1px solid #e0f2fe;" title="Session Date: <?= htmlspecialchars($dClean) ?> (Column: <?= htmlspecialchars($col) ?>)">
+                                                    <div style="font-size:11px;font-weight:800;color:#0369a1;"><?= htmlspecialchars($label) ?></div>
+                                                    <div style="font-size:9px;color:#0284c7;font-weight:700;">(0 or 1)</div>
+                                                </th>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                        <th style="width:85px;text-align:center;background:#f8fafc;border-left:2px solid #e2e8f0;">Present</th>
+                                        <th style="width:75px;text-align:center;background:#f8fafc;">%</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($cStudents as $sIdx => $st): ?>
+                                    <tr class="student-matrix-row">
+                                        <td style="color:#94a3b8;font-size:12px;"><?= $sIdx + 1 ?></td>
+                                        <td>
+                                            <span class="roll-badge"><?= htmlspecialchars($st['roll_no']) ?></span>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight:700;color:#0f172a;" class="st-name-text">
+                                                <?= htmlspecialchars($st['student_name']) ?>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span style="font-family:monospace;font-size:12px;color:#475569;background:#f8fafc;padding:2px 6px;border-radius:4px;border:1px solid #e2e8f0;" class="st-enroll-text">
+                                                <?= htmlspecialchars($st['enrollment_no'] ?: '—') ?>
+                                            </span>
+                                        </td>
+                                        <?php if (empty($attCols)): ?>
+                                            <td style="text-align:center;color:#94a3b8;font-size:12px;">
+                                                —
+                                            </td>
+                                        <?php else: ?>
+                                            <?php foreach ($attCols as $col): 
+                                                $val = $st[$col] ?? null;
+                                            ?>
+                                                <td style="text-align:center;background:#ffffff;border-left:1px solid #f1f5f9;">
+                                                    <?php if ($val === 1 || $val === '1'): ?>
+                                                        <span class="badge badge-green" style="font-size:11px;font-weight:800;padding:2px 8px;" title="Present (1)">1</span>
+                                                    <?php elseif ($val === 0 || $val === '0'): ?>
+                                                        <span class="badge badge-red" style="font-size:11px;font-weight:800;padding:2px 8px;" title="Absent (0)">0</span>
+                                                    <?php else: ?>
+                                                        <span style="color:#cbd5e1;font-weight:600;">—</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                        <td style="text-align:center;font-weight:800;color:#0f172a;border-left:2px solid #e2e8f0;background:#f8fafc;">
+                                            <?= $st['present_count'] ?> / <?= $st['total_classes'] ?>
+                                        </td>
+                                        <td style="text-align:center;background:#f8fafc;">
+                                            <span class="badge <?= $st['attendance_pct'] >= 75 ? 'badge-green' : ($st['attendance_pct'] >= 50 ? 'badge-yellow' : 'badge-red') ?>" style="font-size:11px;font-weight:800;padding:2px 8px;">
+                                                <?= $st['attendance_pct'] ?>%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     <?php endif; ?>
                 </div>
-            </form>
-        </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+
+        <?php else: ?>
+            <!-- ============================================================== -->
+            <!-- VIEW 2: LECTURE SESSION HISTORY LOGS                           -->
+            <!-- ============================================================== -->
+            <!-- Filter Bar -->
+            <div class="card" style="padding:16px 20px;margin-bottom:24px;">
+                <form method="GET" style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;">
+                    <input type="hidden" name="view" value="logs">
+                    <div style="flex:1;min-width:240px;">
+                        <label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;">Assigned Subject / Course</label>
+                        <select name="course_id" class="form-select" style="font-size:13.5px;padding:8px 12px;">
+                            <option value="0">-- All Assigned Courses --</option>
+                            <?php foreach ($assignedCourses as $ac): ?>
+                                <option value="<?= $ac['id'] ?>" <?= $filterCourse === (int)$ac['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($ac['program']) ?> &bull; <?= htmlspecialchars($ac['semester']) ?> &bull; <?= htmlspecialchars($ac['subject_name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div style="width:140px;">
+                        <label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;">Month</label>
+                        <select name="month" class="form-select" style="font-size:13.5px;padding:8px 12px;">
+                            <option value="0">All Months</option>
+                            <?php for ($m = 1; $m <= 12; $m++): ?>
+                                <option value="<?= $m ?>" <?= $filterMonth === $m ? 'selected' : '' ?>><?= date('F', mktime(0, 0, 0, $m, 1)) ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+
+                    <div style="width:120px;">
+                        <label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;">Year</label>
+                        <select name="year" class="form-select" style="font-size:13.5px;padding:8px 12px;">
+                            <option value="0">All Years</option>
+                            <?php for ($y = date('Y'); $y >= date('Y') - 3; $y--): ?>
+                                <option value="<?= $y ?>" <?= $filterYear === $y ? 'selected' : '' ?>><?= $y ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+
+                    <div>
+                        <button type="submit" class="btn btn-primary" style="padding:9px 18px;font-size:13.5px;">Filter</button>
+                        <?php if ($filterCourse || $filterMonth || $filterYear): ?>
+                            <a href="<?= BASE_URL ?>/faculty/attendance.php?view=logs" class="btn btn-outline" style="padding:9px 14px;font-size:13.5px;">Reset</a>
+                        <?php endif; ?>
+                    </div>
+                </form>
+            </div>
 
         <!-- Lecture Sessions & Attendance Table -->
         <div class="card">
@@ -348,6 +552,7 @@ $active_nav = 'attendance';
                 </table>
             <?php endif; ?>
         </div>
+        <?php endif; // end view mode cards vs logs ?>
     </div>
 
     <!-- Attendance Sheet Modal -->
@@ -407,6 +612,23 @@ $active_nav = 'attendance';
     </div>
 
     <script>
+    function filterCardStudents(input, tableId) {
+        const q = input.value.toLowerCase().trim();
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        const rows = table.querySelectorAll('tbody tr.student-matrix-row');
+        rows.forEach(r => {
+            const name = r.querySelector('.st-name-text')?.textContent.toLowerCase() || '';
+            const roll = r.querySelector('.roll-badge')?.textContent.toLowerCase() || '';
+            const enroll = r.querySelector('.st-enroll-text')?.textContent.toLowerCase() || '';
+            if (!q || name.includes(q) || roll.includes(q) || enroll.includes(q)) {
+                r.style.display = '';
+            } else {
+                r.style.display = 'none';
+            }
+        });
+    }
+
     function openAttendanceSheet(lectureId) {
         document.getElementById('attModal').style.display = 'flex';
         document.getElementById('modalLoading').style.display = 'block';

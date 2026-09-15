@@ -206,3 +206,70 @@ function recordCohortAttendance(
     }
 }
 
+// ─── Get Cohort Attendance Matrix Data for Table Cards ────────────────────────
+function getCohortAttendanceMatrix(PDO $pdo, string $progName, $semester, ?int $courseId = null): ?array {
+    $table = getCohortStudentTable($progName, $semester);
+    try {
+        $chk = $pdo->query("SHOW TABLES LIKE '{$table}'")->fetchColumn();
+        if (!$chk) return null;
+
+        $allCols = getCohortAttendanceColumns($pdo, $table);
+        $attCols = [];
+
+        if ($courseId) {
+            $courseSpecificPrefix = "_c{$courseId}";
+            foreach ($allCols as $col) {
+                // If column has specific course suffix or is a general date column
+                if (str_ends_with($col, $courseSpecificPrefix) || !preg_match('/_c\d+$/', $col)) {
+                    $attCols[] = $col;
+                }
+            }
+        } else {
+            $attCols = $allCols;
+        }
+
+        // Fetch student records from dedicated physical table
+        $stmt = $pdo->query("SELECT * FROM `{$table}` ORDER BY CAST(roll_no AS UNSIGNED) ASC, roll_no ASC, student_name ASC");
+        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Calculate student summaries
+        $totalPresentAll = 0;
+        $totalSlotsAll = 0;
+
+        foreach ($students as &$st) {
+            $pCount = 0;
+            $aCount = 0;
+            foreach ($attCols as $col) {
+                $val = $st[$col] ?? null;
+                if ($val === 1 || $val === '1') {
+                    $pCount++;
+                } elseif ($val === 0 || $val === '0') {
+                    $aCount++;
+                }
+            }
+            $st['present_count'] = $pCount;
+            $st['absent_count']  = $aCount;
+            $st['total_classes'] = count($attCols);
+            $st['attendance_pct'] = (count($attCols) > 0) ? round(($pCount / count($attCols)) * 100, 1) : 0;
+
+            $totalPresentAll += $pCount;
+            $totalSlotsAll += count($attCols);
+        }
+        unset($st);
+
+        $avgRate = ($totalSlotsAll > 0) ? round(($totalPresentAll / $totalSlotsAll) * 100, 1) : 0;
+
+        return [
+            'table_name'     => $table,
+            'attendance_cols'=> $attCols,
+            'students'       => $students,
+            'total_sessions' => count($attCols),
+            'total_students' => count($students),
+            'avg_attendance' => $avgRate
+        ];
+    } catch (Exception $e) {
+        error_log("getCohortAttendanceMatrix error: " . $e->getMessage());
+        return null;
+    }
+}
+
