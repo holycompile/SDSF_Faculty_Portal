@@ -75,13 +75,21 @@ function classTypeLabel(string $t): string {
 // ─── Flash message helpers ───────────────────────────────────────────────────
 function setFlash(string $type, string $msg): void {
     if (session_status() === PHP_SESSION_NONE) session_start();
-    $_SESSION['flash'] = ['type' => $type, 'msg' => $msg];
+    $_SESSION['flash'] = ['type' => $type, 'msg' => $msg, 'message' => $msg];
 }
 
 function getFlash(): ?array {
     if (session_status() === PHP_SESSION_NONE) session_start();
     $f = $_SESSION['flash'] ?? null;
     unset($_SESSION['flash']);
+    if ($f && is_array($f)) {
+        if (!isset($f['message']) && isset($f['msg'])) {
+            $f['message'] = $f['msg'];
+        }
+        if (!isset($f['msg']) && isset($f['message'])) {
+            $f['msg'] = $f['message'];
+        }
+    }
     return $f;
 }
 

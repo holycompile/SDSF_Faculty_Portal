@@ -218,7 +218,7 @@ $active_nav = 'attendance';
 
         <?php $f = getFlash(); if ($f): ?>
             <div class="alert alert-<?= $f['type'] === 'success' ? 'success' : ($f['type'] === 'warning' ? 'warning' : 'error') ?>">
-                <?= $f['message'] ?>
+                <?= $f['message'] ?? $f['msg'] ?? '' ?>
             </div>
         <?php endif; ?>
 

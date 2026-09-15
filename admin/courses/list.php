@@ -417,10 +417,6 @@ $active_nav = 'courses-list';
                                 </td>
                                 <td style="text-align:right;">
                                     <div style="display:inline-flex;gap:6px;align-items:center;">
-                                        <a href="<?= BASE_URL ?>/admin/students/index.php?program=<?= urlencode($progName) ?>&semester=<?= urlencode($semName) ?>&course_id=<?= $c['id'] ?>" class="btn btn-outline btn-sm" style="color:#0f766e;border-color:#99f6e4;background:#f0fdfa;" title="View Student List for this Subject">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                                            Students
-                                        </a>
                                         <a href="<?= BASE_URL ?>/admin/courses/edit.php?id=<?= $c['id'] ?>&from_prog=<?= urlencode($progName) ?>&from_sem=<?= $semNum ?>" class="btn btn-outline btn-sm" title="Edit Subject">
                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                             Edit
@@ -554,12 +550,13 @@ function closeCourseModal() {
 
 document.addEventListener('DOMContentLoaded', function() {
     var params = new URLSearchParams(window.location.search);
-    var semParam = params.get('sem');
+    var semParam = params.get('sem') || params.get('semester');
     var hash = window.location.hash;
     var targetId = null;
 
     if (semParam) {
-        targetId = 'sem-' + semParam;
+        var numMatch = semParam.match(/\d+/);
+        targetId = 'sem-' + (numMatch ? numMatch[0] : semParam);
     } else if (hash && hash.indexOf('sem-') !== -1) {
         targetId = hash.replace('#', '');
     }
@@ -568,12 +565,17 @@ document.addEventListener('DOMContentLoaded', function() {
         var btn = document.querySelector('.sem-tab-btn[onclick*="\'' + targetId + '\'"]');
         if (btn) {
             filterSemester(targetId, btn);
+        } else {
+            var sections = document.querySelectorAll('.sem-section');
+            sections.forEach(function(sec) {
+                sec.style.display = (sec.id === targetId) ? 'block' : 'none';
+            });
         }
         var targetSec = document.getElementById(targetId);
         if (targetSec) {
             setTimeout(function() {
                 targetSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
+            }, 150);
         }
     }
 });
