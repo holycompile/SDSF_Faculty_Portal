@@ -159,6 +159,10 @@ body{background:var(--bg);color:var(--text);margin:0;}
             <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             Lecture History
         </a>
+        <a href="<?= BASE_URL ?>/faculty/attendance.php" class="nav-link <?= $_active==='attendance'?'active':'' ?>">
+            <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Student Attendance
+        </a>
 
         <div class="nav-section">Official Documents</div>
         <a href="<?= BASE_URL ?>/admin/reports/annexure_iv.php" target="_blank" class="nav-link">

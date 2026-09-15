@@ -61,6 +61,16 @@ $tagStmt = $pdo->prepare("SELECT semester_number, year_tag FROM semester_tags WH
 $tagStmt->execute([$progId]);
 $semesterYearTags = $tagStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
+// Fetch student counts per semester for this program
+$stCountStmt = $pdo->prepare("
+    SELECT current_semester, COUNT(*) AS count
+    FROM students
+    WHERE program_id = ? AND status = 'active'
+    GROUP BY current_semester
+");
+$stCountStmt->execute([$progId]);
+$semStudentCounts = $stCountStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
 // Group courses by semester
 $coursesBySemester = [];
 foreach ($semesters as $sem) {
@@ -337,7 +347,11 @@ $active_nav = 'courses-list';
                         </div>
                     </div>
                 </div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <a href="<?= BASE_URL ?>/admin/students/index.php?program=<?= urlencode($progName) ?>&semester=<?= urlencode($semName) ?>" class="btn btn-outline btn-sm" style="background:#f8fafc;border-color:#cbd5e1;color:#1e293b;font-weight:700;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        Student List (<?= (int)($semStudentCounts[$semName] ?? 0) ?>)
+                    </a>
                     <a href="<?= BASE_URL ?>/admin/courses/add.php?program=<?= urlencode($progName) ?>&semester=<?= urlencode($semName) ?>" class="btn btn-outline btn-sm">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         + Add Subject to <?= htmlspecialchars($semName) ?>
@@ -396,7 +410,11 @@ $active_nav = 'courses-list';
                                     </span>
                                 </td>
                                 <td style="text-align:right;">
-                                    <div style="display:inline-flex;gap:6px;">
+                                    <div style="display:inline-flex;gap:6px;align-items:center;">
+                                        <a href="<?= BASE_URL ?>/admin/students/index.php?program=<?= urlencode($progName) ?>&semester=<?= urlencode($semName) ?>&course_id=<?= $c['id'] ?>" class="btn btn-outline btn-sm" style="color:#0f766e;border-color:#99f6e4;background:#f0fdfa;" title="View Student List for this Subject">
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                            Students
+                                        </a>
                                         <a href="<?= BASE_URL ?>/admin/courses/edit.php?id=<?= $c['id'] ?>&from_prog=<?= urlencode($progName) ?>&from_sem=<?= $semNum ?>" class="btn btn-outline btn-sm" title="Edit Subject">
                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                             Edit

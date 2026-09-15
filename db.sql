@@ -164,6 +164,41 @@ CREATE TABLE IF NOT EXISTS password_reset_otps (
   INDEX idx_user_otp (user_type, identifier, otp, is_used)
 );
 
+-- ── 8. STUDENTS & ROSTERS ────────────────────────────────────
+CREATE TABLE IF NOT EXISTS students (
+  id               INT AUTO_INCREMENT PRIMARY KEY,
+  program_id       INT NOT NULL,
+  course_id        INT NULL,
+  batch_year       VARCHAR(50) NULL,
+  current_semester VARCHAR(50) NOT NULL,
+  roll_no          VARCHAR(50) NOT NULL,
+  enrollment_no    VARCHAR(50) NULL,
+  student_name     VARCHAR(150) NOT NULL,
+  status           ENUM('active','inactive') DEFAULT 'active',
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (program_id) REFERENCES academic_programs(id) ON DELETE CASCADE,
+  FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL,
+  UNIQUE KEY uq_prog_sem_roll (program_id, current_semester, roll_no),
+  INDEX idx_prog_sem (program_id, current_semester)
+);
+
+-- ── 9. STUDENT ATTENDANCE ───────────────────────────────────
+CREATE TABLE IF NOT EXISTS student_attendance (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  lecture_id      INT NOT NULL,
+  student_id      INT NOT NULL,
+  attendance_date DATE NOT NULL,
+  status          ENUM('present','absent') DEFAULT 'present',
+  remarks         VARCHAR(255) NULL,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (lecture_id) REFERENCES lecture_entries(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_lecture_student (lecture_id, student_id),
+  INDEX idx_student_att (student_id, attendance_date)
+);
+
 
 -- ── SEED DATA: Academic Programs & Batches ───────────────────
 INSERT INTO academic_programs (program_name, program_code, batch_year, total_semesters) VALUES

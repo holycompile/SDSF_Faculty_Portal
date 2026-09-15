@@ -139,6 +139,15 @@ table.dt{width:100%;border-collapse:collapse;}
             <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
             Add Subject
         </a>
+        <div class="nav-section">Students &amp; Attendance</div>
+        <a href="<?= BASE_URL ?>/admin/students/index.php" class="nav-link <?= $_active==='students-list'?'active':'' ?>">
+            <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Student Rosters
+        </a>
+        <a href="<?= BASE_URL ?>/admin/students/attendance.php" class="nav-link <?= $_active==='students-attendance'?'active':'' ?>">
+            <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Attendance Logs
+        </a>
 
         <div class="nav-section">Records</div>
         <a href="<?= BASE_URL ?>/admin/lectures/overview.php" class="nav-link <?= $_active==='lectures'?'active':'' ?>">

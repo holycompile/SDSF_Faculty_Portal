@@ -23,7 +23,7 @@ try {
     // Get lecture info
     $stmt = $pdo->prepare("
         SELECT le.*, c.subject_name, c.course_code, c.program, c.semester, c.batch_year,
-               fm.name AS faculty_name, fm.emp_code
+               fm.name AS faculty_name, fm.faculty_enrollment_no AS emp_code
         FROM lecture_entries le
         JOIN courses c ON c.id = le.course_id
         JOIN faculty_members fm ON fm.id = le.faculty_id

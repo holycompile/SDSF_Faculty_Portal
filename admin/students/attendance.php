@@ -6,10 +6,7 @@ require_once ROOT . '/includes/helpers.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 requireAdmin();
 
-setFlash('warning', 'Student Roster and Attendance modules are currently disabled.');
-header('Location: ' . BASE_URL . '/admin/courses/list.php');
-exit;
-$facultyMembers = $pdo->query("SELECT id, name, emp_code FROM faculty_members ORDER BY name ASC")->fetchAll();
+$facultyMembers = $pdo->query("SELECT id, name, faculty_enrollment_no AS emp_code FROM faculty_members ORDER BY name ASC")->fetchAll();
 
 $filterProgram = (int)($_GET['program_id'] ?? 0);
 $filterFaculty = (int)($_GET['faculty_id'] ?? 0);
@@ -18,7 +15,7 @@ $filterYear    = (int)($_GET['year'] ?? 0);
 
 $query = "
     SELECT le.*, c.subject_name, c.course_code, c.program, c.semester, c.batch_year, c.class_type,
-           c.program_id, fm.name AS faculty_name, fm.emp_code,
+           c.program_id, fm.name AS faculty_name, fm.faculty_enrollment_no AS emp_code,
            COUNT(sa.id) AS att_total,
            COALESCE(SUM(CASE WHEN sa.status = 'present' THEN 1 ELSE 0 END), 0) AS att_present
     FROM lecture_entries le
@@ -46,7 +43,7 @@ if ($filterYear > 0) {
     $params[] = $filterYear;
 }
 
-$query .= " GROUP BY le.id, c.subject_name, c.course_code, c.program, c.semester, c.batch_year, c.class_type, c.program_id, fm.name, fm.emp_code
+$query .= " GROUP BY le.id, c.subject_name, c.course_code, c.program, c.semester, c.batch_year, c.class_type, c.program_id, fm.name, fm.faculty_enrollment_no
            ORDER BY le.lecture_date DESC, le.id DESC";
 
 $stmt = $pdo->prepare($query);

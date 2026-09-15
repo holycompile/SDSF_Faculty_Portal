@@ -64,11 +64,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $rate = ($sessionType === 'P') ? $facPracticalRate : $facTheoryRate;
             $amount = round($hours * $rate, 2);
 
+            $pdo->beginTransaction();
+
             $ins = $pdo->prepare("
                 INSERT INTO lecture_entries (faculty_id, course_id, lecture_date, hours, rate_per_hour, amount)
                 VALUES (?, ?, ?, ?, ?, ?)
             ");
             $ins->execute([$facultyId, $courseId, $lectureDate, $hours, $rate, $amount]);
+            $lectureId = (int)$pdo->lastInsertId();
+
+            // Record attendance for students submitted with this lecture
+            $attendanceData = $_POST['attendance'] ?? [];
+            $totalMarked = 0;
+            $presentCount = 0;
+            if (!empty($attendanceData) && is_array($attendanceData)) {
+                $attStmt = $pdo->prepare("
+                    INSERT INTO student_attendance (lecture_id, student_id, attendance_date, status)
+                    VALUES (?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE status = VALUES(status), attendance_date = VALUES(attendance_date)
+                ");
+                foreach ($attendanceData as $stId => $stStatus) {
+                    $cleanStatus = ($stStatus === 'absent') ? 'absent' : 'present';
+                    $attStmt->execute([$lectureId, (int)$stId, $lectureDate, $cleanStatus]);
+                    $totalMarked++;
+                    if ($cleanStatus === 'present') {
+                        $presentCount++;
+                    }
+                }
+            }
 
             // Calculate monthly total to check 30,000 threshold
             $month = (int)date('m', strtotime($lectureDate));
@@ -80,15 +103,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mStmt->execute([$facultyId, $month, $year]);
             $monthTotal = (float)$mStmt->fetchColumn();
 
+            $pdo->commit();
+
+            $attMsg = "";
+            if ($totalMarked > 0) {
+                $attMsg = " Attendance recorded: {$presentCount}/{$totalMarked} students present.";
+            }
+
             if ($monthTotal > 30000) {
-                setFlash('warning', "Lecture logged successfully (Remuneration: Rs. " . number_format($amount, 2) . ")! Note: Monthly total is Rs. " . number_format($monthTotal, 2) . ", which exceeds the Rs. 30,000 ceiling.");
+                setFlash('warning', "Lecture session logged (Remuneration: Rs. " . number_format($amount, 2) . ")!{$attMsg} Note: Monthly total is Rs. " . number_format($monthTotal, 2) . ", which exceeds the Rs. 30,000 ceiling.");
             } else {
-                setFlash('success', "Lecture session successfully saved! Calculated remuneration: Rs. " . number_format($amount, 2) . ".");
+                setFlash('success', "Lecture session saved successfully! Calculated remuneration: Rs. " . number_format($amount, 2) . ".{$attMsg}");
             }
 
             header('Location: ' . BASE_URL . '/faculty/dashboard.php');
             exit;
         } catch (PDOException $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $errors[] = 'Database error: ' . $e->getMessage();
         }
     }
@@ -204,6 +237,48 @@ $active_nav = 'lecture-entry';
             color: #4f46e5;
             box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
+        .att-toggle-group {
+            display: inline-flex;
+            background: #f1f5f9;
+            padding: 3px;
+            border-radius: 8px;
+            border: 1.5px solid #cbd5e1;
+            gap: 2px;
+        }
+        .att-toggle-group input[type="radio"] { display: none; }
+        .att-toggle-group label {
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all .15s ease;
+            user-select: none;
+            color: #64748b;
+        }
+        .att-toggle-group input[value="present"]:checked + label {
+            background: #16a34a;
+            color: #ffffff;
+            box-shadow: 0 1px 4px rgba(22,163,74,0.3);
+        }
+        .att-toggle-group input[value="absent"]:checked + label {
+            background: #dc2626;
+            color: #ffffff;
+            box-shadow: 0 1px 4px rgba(220,38,38,0.3);
+        }
+        .roll-badge {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #eef2ff;
+            color: #4338ca;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 800;
+            font-family: monospace;
+        }
     </style>
     <?php require_once ROOT . '/includes/faculty_sidebar.php'; ?>
 </head>
@@ -304,6 +379,59 @@ $active_nav = 'lecture-entry';
                         </div>
                     </div>
 
+                    <!-- Student Attendance Register for Selected Course -->
+                    <div id="attendanceSection" style="margin-top:24px;margin-bottom:24px;border:1.5px solid #e2e8f0;border-radius:14px;background:#ffffff;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                        <div style="background:#f8fafc;padding:14px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div style="width:34px;height:34px;border-radius:8px;background:#eef2ff;color:#4f46e5;display:flex;align-items:center;justify-content:center;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                </div>
+                                <div>
+                                    <div style="font-size:14.5px;font-weight:800;color:#0f172a;">
+                                        Student Attendance Register
+                                    </div>
+                                    <div style="font-size:12px;color:#64748b;" id="attCohortInfo">
+                                        Mark attendance for the enrolled cohort
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="markAllAttendance('present')" style="font-size:12px;padding:4px 10px;background:#f0fdf4;border-color:#bbf7d0;color:#16a34a;font-weight:700;">
+                                    ✓ All Present
+                                </button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="markAllAttendance('absent')" style="font-size:12px;padding:4px 10px;background:#fef2f2;border-color:#fecaca;color:#dc2626;font-weight:700;">
+                                    ✕ All Absent
+                                </button>
+                                <span id="attSummaryBadge" style="font-size:12px;font-weight:700;color:#1e3a8a;background:#eff6ff;padding:4px 10px;border-radius:8px;border:1px solid #bfdbfe;">
+                                    0 Present &bull; 0 Absent
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Student Rows Container -->
+                        <div id="attendanceStudentsContainer" style="padding:16px;">
+                            <div id="attLoading" style="text-align:center;padding:24px;color:#94a3b8;font-size:13.5px;">
+                                Loading enrolled student roster...
+                            </div>
+                            <div id="attEmpty" style="display:none;text-align:center;padding:24px;color:#94a3b8;font-size:13.5px;">
+                                No enrolled students found for this subject / cohort.
+                            </div>
+                            <table class="dt" id="attTable" style="display:none;width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="width:45px;">#</th>
+                                        <th style="width:85px;">Roll No</th>
+                                        <th>Student Name</th>
+                                        <th style="width:160px;">Enrollment No</th>
+                                        <th style="text-align:center;width:180px;">Attendance Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attTbody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <!-- Live Calculation Preview -->
                     <div class="calc-box">
                         <div style="font-size:12px;font-weight:800;color:#4338ca;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
@@ -334,7 +462,7 @@ $active_nav = 'lecture-entry';
 
                     <button type="submit" class="btn-submit" id="submitBtn">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                        Save Lecture Session
+                        Save Lecture Session &amp; Submit Attendance
                     </button>
                 </form>
             </div>
@@ -369,6 +497,87 @@ $active_nav = 'lecture-entry';
         }
     }
 
+    function loadCourseStudents(courseId) {
+        if (!courseId) return;
+
+        const loading = document.getElementById('attLoading');
+        const empty = document.getElementById('attEmpty');
+        const table = document.getElementById('attTable');
+        const tbody = document.getElementById('attTbody');
+        const cohortInfo = document.getElementById('attCohortInfo');
+
+        loading.style.display = 'block';
+        empty.style.display = 'none';
+        table.style.display = 'none';
+        tbody.innerHTML = '';
+
+        fetch('<?= BASE_URL ?>/api/get_students.php?course_id=' + encodeURIComponent(courseId))
+            .then(res => res.json())
+            .then(data => {
+                loading.style.display = 'none';
+                if (data.success && data.students && data.students.length > 0) {
+                    cohortInfo.textContent = `${data.program_name} • ${data.semester} (${data.batch_year || ''}) • ${data.total_students} Enrolled`;
+
+                    data.students.forEach((st, idx) => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td style="color:#94a3b8;font-size:12px;">${idx + 1}</td>
+                            <td><span class="roll-badge">${escapeHtml(st.roll_no)}</span></td>
+                            <td><strong style="color:#0f172a;font-size:14px;">${escapeHtml(st.student_name)}</strong></td>
+                            <td><span style="font-family:monospace;font-size:12px;color:#475569;background:#f8fafc;padding:2px 7px;border-radius:5px;border:1px solid #e2e8f0;">${escapeHtml(st.enrollment_no || '—')}</span></td>
+                            <td style="text-align:center;">
+                                <div class="att-toggle-group">
+                                    <input type="radio" name="attendance[${st.id}]" id="att_${st.id}_p" value="present" checked onchange="updateAttendanceSummary()">
+                                    <label for="att_${st.id}_p">Present</label>
+                                    <input type="radio" name="attendance[${st.id}]" id="att_${st.id}_a" value="absent" onchange="updateAttendanceSummary()">
+                                    <label for="att_${st.id}_a">Absent</label>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    table.style.display = 'table';
+                    updateAttendanceSummary();
+                } else {
+                    empty.style.display = 'block';
+                    cohortInfo.textContent = data.message || 'No enrolled students found.';
+                    document.getElementById('attSummaryBadge').textContent = '0 Enrolled';
+                }
+            })
+            .catch(err => {
+                loading.style.display = 'none';
+                empty.textContent = 'Could not load student roster: ' + err.message;
+                empty.style.display = 'block';
+            });
+    }
+
+    function updateAttendanceSummary() {
+        const presentInputs = document.querySelectorAll('input[name^="attendance["][value="present"]:checked');
+        const absentInputs = document.querySelectorAll('input[name^="attendance["][value="absent"]:checked');
+        const pCount = presentInputs.length;
+        const aCount = absentInputs.length;
+        document.getElementById('attSummaryBadge').innerHTML = `<span style="color:#16a34a;font-weight:800;">${pCount} Present</span> &bull; <span style="color:#dc2626;font-weight:800;">${aCount} Absent</span>`;
+    }
+
+    function markAllAttendance(status) {
+        const radios = document.querySelectorAll(`input[name^="attendance["][value="${status}"]`);
+        radios.forEach(r => {
+            r.checked = true;
+        });
+        updateAttendanceSummary();
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     function onCourseSelected() {
         const select = document.getElementById('course_id');
         const selectedOption = select ? select.options[select.selectedIndex] : null;
@@ -382,6 +591,7 @@ $active_nav = 'lecture-entry';
             } else {
                 document.getElementById('type_t').checked = true;
             }
+            loadCourseStudents(selectedOption.value);
         }
         calculateRemuneration();
     }
