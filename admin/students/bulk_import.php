@@ -54,6 +54,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             VALUES (?, ?, ?, ?, ?, ?, 'active')
         ");
 
+        $dedTbl = getCohortStudentTable($progData['program_name'], $semester);
+        $dedIns = null;
+        try {
+            $chk = $pdo->query("SHOW TABLES LIKE '{$dedTbl}'")->fetchColumn();
+            if ($chk) {
+                $dedIns = $pdo->prepare("
+                    INSERT INTO `{$dedTbl}` (roll_no, student_name, enrollment_no, batch_year, status)
+                    VALUES (?, ?, ?, ?, 'active')
+                    ON DUPLICATE KEY UPDATE 
+                        student_name = VALUES(student_name), 
+                        enrollment_no = VALUES(enrollment_no), 
+                        batch_year = VALUES(batch_year),
+                        status = VALUES(status)
+                ");
+            }
+        } catch (Exception $e) {}
+
         foreach ($lines as $line) {
             $line = trim($line);
             if (empty($line)) continue;
@@ -78,6 +95,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($name) && !empty($rollNo)) {
                 try {
                     $ins->execute([$programId, $batchYear, $semester, $rollNo, $enrollNo, $name]);
+                    if ($dedIns) {
+                        try {
+                            $dedIns->execute([$rollNo, $name, $enrollNo, $batchYear]);
+                        } catch (Exception $e) {}
+                    }
                     $importedCount++;
                 } catch (PDOException $e) {
                     $skippedCount++;

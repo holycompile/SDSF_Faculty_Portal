@@ -205,11 +205,24 @@ function recordCohortAttendance(
             $rollMap = $attendanceData;
         }
 
-        // Update attendance values (1 for present, 0 for absent) in the dedicated table
-        $upd = $pdo->prepare("UPDATE `{$table}` SET `{$targetCol}` = ? WHERE roll_no = ?");
-        foreach ($rollMap as $roll => $status) {
-            $val = ($status === 'present' || $status === 1 || $status === '1') ? 1 : 0;
-            $upd->execute([$val, $roll]);
+        // Update attendance values (1 for present, 0 for absent) in the dedicated table in a single batch query
+        if (!empty($rollMap)) {
+            $cases = [];
+            $rolls = [];
+            $params = [];
+            foreach ($rollMap as $roll => $status) {
+                $val = ($status === 'present' || $status === 1 || $status === '1') ? 1 : 0;
+                $cases[] = "WHEN ? THEN ?";
+                $params[] = (string)$roll;
+                $params[] = $val;
+                $rolls[] = (string)$roll;
+            }
+            $placeholders = implode(',', array_fill(0, count($rolls), '?'));
+            $caseSql = implode(' ', $cases);
+            $sql = "UPDATE `{$table}` SET `{$targetCol}` = CASE roll_no {$caseSql} ELSE `{$targetCol}` END WHERE roll_no IN ({$placeholders})";
+            $allParams = array_merge($params, $rolls);
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($allParams);
         }
 
         return $targetCol;
