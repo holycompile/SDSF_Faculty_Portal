@@ -14,8 +14,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     $lectureId = (int)($_POST['lecture_id'] ?? 0);
     $attUpdates = $_POST['attendance'] ?? [];
 
-    // Verify lecture belongs to this faculty
-    $vStmt = $pdo->prepare("SELECT id, lecture_date FROM lecture_entries WHERE id = ? AND faculty_id = ?");
+    // Verify lecture belongs to this faculty and fetch course info
+    $vStmt = $pdo->prepare("
+        SELECT le.id, le.lecture_date, le.course_id, c.program, c.semester, ap.program_name
+        FROM lecture_entries le
+        JOIN courses c ON c.id = le.course_id
+        LEFT JOIN academic_programs ap ON ap.id = c.program_id
+        WHERE le.id = ? AND le.faculty_id = ?
+    ");
     $vStmt->execute([$lectureId, $facultyId]);
     $lec = $vStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -30,6 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                 $status = ($status === 'absent') ? 'absent' : 'present';
                 $updStmt->execute([$lectureId, (int)$stId, $lec['lecture_date'], $status]);
             }
+
+            // Record into dedicated physical cohort table as dynamic date column with 1 and 0
+            $progName = $lec['program_name'] ?? $lec['program'];
+            recordCohortAttendance($pdo, $progName, $lec['semester'], $lec['lecture_date'], $attUpdates, $lectureId, (int)$lec['course_id']);
+
             setFlash('success', 'Attendance record for this lecture has been successfully updated!');
         } catch (PDOException $e) {
             setFlash('error', 'Could not update attendance: ' . $e->getMessage());

@@ -475,6 +475,17 @@ $active_nav = 'students-list';
             $semNum = (int)filter_var($semName, FILTER_SANITIZE_NUMBER_INT) ?: ($idx + 1);
             $semTag = $semesterYearTags[$semNum] ?? $batchYear;
             $semStudents = $studentsBySemester[$semName] ?? [];
+            $dedTbl = getCohortStudentTable($progName, $semName);
+            $attCols = getCohortAttendanceColumns($pdo, $dedTbl);
+            $dedRowsByRoll = [];
+            if (!empty($attCols)) {
+                try {
+                    $stmtD = $pdo->query("SELECT * FROM `{$dedTbl}`");
+                    while ($r = $stmtD->fetch(PDO::FETCH_ASSOC)) {
+                        $dedRowsByRoll[$r['roll_no']] = $r;
+                    }
+                } catch (Exception $e) {}
+            }
         ?>
         <div class="cohort-card fade-up" id="cohort-table-sem-<?= $semNum ?>">
             <div class="cohort-header">
@@ -490,7 +501,10 @@ $active_nav = 'students-list';
                             </span>
                         </div>
                         <div style="font-size:12px;color:#64748b;margin-top:2px;">
-                            Cohort Table &bull; <?= count($semStudents) ?> enrolled student<?= count($semStudents) === 1 ? '' : 's' ?>
+                            Dedicated Table: <code style="color:#1e3a8a;font-weight:700;background:#eff6ff;padding:1px 6px;border-radius:4px;border:1px solid #bfdbfe;"><?= htmlspecialchars($dedTbl) ?></code> &bull; <?= count($semStudents) ?> enrolled student<?= count($semStudents) === 1 ? '' : 's' ?>
+                            <?php if (!empty($attCols)): ?>
+                                &bull; <span class="badge badge-blue" style="font-size:11px;padding:2px 7px;"><?= count($attCols) ?> Attendance Date<?= count($attCols) === 1 ? '' : 's' ?> Recorded</span>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -516,6 +530,7 @@ $active_nav = 'students-list';
                     </div>
                 </div>
             <?php else: ?>
+                <div style="overflow-x:auto;">
                 <table class="dt student-data-table">
                     <thead>
                         <tr>
@@ -525,6 +540,19 @@ $active_nav = 'students-list';
                             <th style="width:160px;">Enrollment No</th>
                             <th style="width:120px;">Batch Year</th>
                             <th style="width:100px;">Status</th>
+                            <?php foreach ($attCols as $cCol): 
+                                $dStr = str_replace('att_', '', $cCol);
+                                $dParts = explode('_', $dStr);
+                                $colLabel = $dStr;
+                                if (count($dParts) >= 3) {
+                                    $colLabel = $dParts[2] . '/' . $dParts[1];
+                                }
+                            ?>
+                                <th style="width:85px;text-align:center;background:#f0f9ff;border-left:1px solid #e0f2fe;" title="Attendance Date: <?= htmlspecialchars($dStr) ?> (Dedicated Table Column: <?= htmlspecialchars($cCol) ?>)">
+                                    <div style="font-size:11px;font-weight:800;color:#0369a1;"><?= htmlspecialchars($colLabel) ?></div>
+                                    <div style="font-size:9px;color:#0284c7;font-weight:600;">(0 or 1)</div>
+                                </th>
+                            <?php endforeach; ?>
                             <th style="text-align:right;width:160px;">Actions (Editable)</th>
                         </tr>
                     </thead>
@@ -562,6 +590,19 @@ $active_nav = 'students-list';
                                     <span class="badge badge-red">Inactive</span>
                                 <?php endif; ?>
                             </td>
+                            <?php foreach ($attCols as $cCol): 
+                                $attVal = $dedRowsByRoll[$st['roll_no']][$cCol] ?? null;
+                            ?>
+                                <td style="text-align:center;background:#f8fafc;border-left:1px solid #f1f5f9;">
+                                    <?php if ($attVal === 1 || $attVal === '1'): ?>
+                                        <span class="badge badge-green" style="font-size:11px;font-weight:800;padding:2px 8px;" title="Present (1)">1</span>
+                                    <?php elseif ($attVal === 0 || $attVal === '0'): ?>
+                                        <span class="badge badge-red" style="font-size:11px;font-weight:800;padding:2px 8px;" title="Absent (0)">0</span>
+                                    <?php else: ?>
+                                        <span style="color:#cbd5e1;font-weight:600;">—</span>
+                                    <?php endif; ?>
+                                </td>
+                            <?php endforeach; ?>
                             <td style="text-align:right;">
                                 <div style="display:inline-flex;gap:6px;align-items:center;">
                                     <button type="button" class="btn btn-outline btn-sm" style="padding:4px 10px;font-size:12px;font-weight:700;"
@@ -580,6 +621,7 @@ $active_nav = 'students-list';
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+                </div>
             <?php endif; ?>
         </div>
         <?php endforeach; ?>

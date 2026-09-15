@@ -91,6 +91,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $presentCount++;
                     }
                 }
+
+                // Record into dedicated physical cohort table as dynamic date column with 1 (present) and 0 (absent)
+                $progName = $matchedCourse['prog_title'] ?? $matchedCourse['program'];
+                $semName  = $matchedCourse['semester'];
+                recordCohortAttendance($pdo, $progName, $semName, $lectureDate, $attendanceData, $lectureId, (int)$courseId);
             }
 
             // Calculate monthly total to check 30,000 threshold

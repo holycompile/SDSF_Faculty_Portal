@@ -111,3 +111,98 @@ function getCohortStudentTable(string $progNameOrCode, $semester): string {
     }
     return "students_{$prefix}_sem{$semNum}";
 }
+
+// ─── Get Dynamic Attendance Columns in Cohort Table ─────────────────────────
+function getCohortAttendanceColumns(PDO $pdo, string $tableName): array {
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM `{$tableName}` LIKE 'att_%'");
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+// ─── Record Attendance Directly into Dedicated Cohort Table ─────────────────
+function recordCohortAttendance(
+    PDO $pdo,
+    string $progName,
+    $semester,
+    string $date,
+    array $attendanceData,
+    ?int $lectureId = null,
+    ?int $courseId = null
+): string {
+    $table = getCohortStudentTable($progName, $semester);
+
+    // Verify table exists
+    try {
+        $chk = $pdo->query("SHOW TABLES LIKE '{$table}'")->fetchColumn();
+        if (!$chk) {
+            return '';
+        }
+    } catch (Exception $e) {
+        return '';
+    }
+
+    // Format target column name per Option 2 (e.g. att_2026_09_15)
+    $datePart = date('Y_m_d', strtotime($date));
+    $baseCol = "att_{$datePart}";
+    $targetCol = $baseCol;
+
+    try {
+        $colStmt = $pdo->query("SHOW COLUMNS FROM `{$table}`");
+        $cols = $colStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!in_array($baseCol, $cols)) {
+            $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$baseCol}` TINYINT(1) NOT NULL DEFAULT 0");
+            $targetCol = $baseCol;
+        } else {
+            // Check if there is collision with another course lecture on the same date
+            if ($courseId && $lectureId) {
+                $otherLec = $pdo->prepare("
+                    SELECT id FROM lecture_entries 
+                    WHERE lecture_date = ? AND id != ? AND course_id != ? 
+                    LIMIT 1
+                ");
+                $otherLec->execute([$date, $lectureId, $courseId]);
+                if ($otherLec->fetchColumn()) {
+                    $candCol = "att_{$datePart}_c{$courseId}";
+                    if (!in_array($candCol, $cols)) {
+                        $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$candCol}` TINYINT(1) NOT NULL DEFAULT 0");
+                    }
+                    $targetCol = $candCol;
+                }
+            }
+        }
+
+        // Map attendanceData keys (student_id or roll_no) to roll_no
+        $stIds = array_filter(array_keys($attendanceData), 'is_numeric');
+        $rollMap = [];
+        if (!empty($stIds)) {
+            $inClause = implode(',', array_map('intval', $stIds));
+            $rRows = $pdo->query("SELECT id, roll_no FROM students WHERE id IN ({$inClause})")->fetchAll(PDO::FETCH_KEY_PAIR);
+            foreach ($attendanceData as $k => $val) {
+                if (isset($rRows[$k])) {
+                    $rollMap[$rRows[$k]] = $val;
+                } else {
+                    $rollMap[$k] = $val;
+                }
+            }
+        } else {
+            $rollMap = $attendanceData;
+        }
+
+        // Update attendance values (1 for present, 0 for absent) in the dedicated table
+        $upd = $pdo->prepare("UPDATE `{$table}` SET `{$targetCol}` = ? WHERE roll_no = ?");
+        foreach ($rollMap as $roll => $status) {
+            $val = ($status === 'present' || $status === 1 || $status === '1') ? 1 : 0;
+            $upd->execute([$val, $roll]);
+        }
+
+        return $targetCol;
+    } catch (Exception $e) {
+        error_log("recordCohortAttendance error for {$table}: " . $e->getMessage());
+        return '';
+    }
+}
+
