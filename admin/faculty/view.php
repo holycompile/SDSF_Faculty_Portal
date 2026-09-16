@@ -93,6 +93,11 @@ $active_nav = 'faculty-list';
         .report-menu.show { display: block; }
         .report-menu a { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border-radius: 8px; color: #1e293b; text-decoration: none; font-size: 13px; font-weight: 500; transition: background 0.15s; }
         .report-menu a:hover { background: #f1f5f9; color: #4f46e5; }
+        @media (max-width: 768px) {
+            .tb-right .btn-sm span.btn-label { display: none; }
+            .tb-right { gap: 6px; }
+            .tb-right .btn-sm { padding: 6px 10px; font-size: 12px; }
+        }
     </style>
     <?php require_once ROOT . '/includes/admin_sidebar.php'; ?>
 </head>
@@ -106,8 +111,8 @@ $active_nav = 'faculty-list';
             <span class="tb-crumb"><?= htmlspecialchars($faculty['name']) ?></span>
         </div>
         <div class="tb-right" style="display:flex;align-items:center;gap:10px;">
-            <a href="<?= BASE_URL ?>/admin/faculty/list.php" class="btn btn-outline btn-sm">
-                &larr; Back to Faculty List
+            <a href="<?= BASE_URL ?>/admin/faculty/list.php" class="btn btn-outline btn-sm" title="Back to Faculty List">
+                &larr; <span class="btn-label">Back</span>
             </a>
 
             <!-- Official Reports Dropdown (compact, never wraps) -->

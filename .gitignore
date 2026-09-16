@@ -14,6 +14,8 @@
 !.env.example
 includes/mail_config.local.php
 mail_config.local.php
+includes/db.local.php
+db.local.php
 
 # OS generated files
 .DS_Store

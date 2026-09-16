@@ -36,6 +36,11 @@ $active_nav = 'faculty-list';
     <title>Faculty Members — SDSF Admin</title>
     <link rel="stylesheet" href="<?= BASE_URL ?>/tailwind/output.css">
     <?php require_once ROOT . '/includes/admin_sidebar.php'; ?>
+    <style>
+        @media (max-width: 640px) {
+            .search-box-wrap { max-width: 100% !important; width: 100% !important; }
+        }
+    </style>
 </head>
 <body>
     <header class="topbar">
@@ -58,8 +63,8 @@ $active_nav = 'faculty-list';
                 <h1>Faculty Members</h1>
                 <p>Manage visiting faculty, view profiles, course assignments, and generate remuneration bills (<?= count($facultyList) ?> total)</p>
             </div>
-            <div>
-                <input type="text" id="facultySearch" placeholder="Search by name, enroll no, dept..." class="form-input" style="width:280px;padding:9px 14px;font-size:13.5px;" oninput="filterFaculty()">
+            <div class="search-box-wrap" style="width:100%;max-width:280px;">
+                <input type="text" id="facultySearch" placeholder="Search by name, enroll no, dept..." class="form-input" style="width:100%;padding:9px 14px;font-size:13.5px;" oninput="filterFaculty()">
             </div>
         </div>
 

@@ -74,6 +74,16 @@ $active_nav = 'dashboard';
 .q-sub{color:#94a3b8;font-size:12px;margin-top:2px;}
 .mini-av{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0;}
 .content-row{display:grid;grid-template-columns:1fr 320px;gap:16px;}
+@media (max-width: 992px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .content-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+    .stats { grid-template-columns: 1fr; }
+    .quick-grid { grid-template-columns: 1fr; }
+    .welcome { padding: 18px 16px; flex-direction: column; align-items: flex-start; gap: 12px; }
+    .status-chip { align-self: flex-start; }
+}
 </style>
 </head>
 <body>

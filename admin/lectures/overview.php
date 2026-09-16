@@ -90,6 +90,20 @@ $active_nav = 'lectures';
         .report-menu.show { display: block; }
         .report-menu a { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border-radius: 8px; color: #1e293b; text-decoration: none; font-size: 13px; font-weight: 500; transition: background 0.15s; }
         .report-menu a:hover { background: #f1f5f9; color: #4f46e5; }
+        @media (max-width: 768px) {
+            .lecture-filter-form {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+            }
+            .lecture-filter-form > div {
+                width: 100% !important;
+            }
+            .lecture-filter-form .btn {
+                flex: 1;
+                justify-content: center;
+            }
+        }
     </style>
     <?php require_once ROOT . '/includes/admin_sidebar.php'; ?>
 </head>
@@ -132,7 +146,7 @@ $active_nav = 'lectures';
 
         <!-- Filter Card -->
         <div class="card fade-up" style="margin-bottom:24px;padding:20px 24px;">
-            <form method="GET" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+            <form method="GET" class="lecture-filter-form" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
                 <div style="flex:1;min-width:200px;">
                     <label class="form-label">Filter by Faculty</label>
                     <select name="faculty_id" class="form-select">

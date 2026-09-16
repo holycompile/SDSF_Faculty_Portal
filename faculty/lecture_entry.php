@@ -293,6 +293,26 @@ $active_nav = 'lecture-entry';
             font-weight: 800;
             font-family: monospace;
         }
+        .form-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 640px) {
+            .form-row-2 {
+                grid-template-columns: 1fr !important;
+                gap: 14px;
+            }
+            .session-toggle {
+                flex-direction: column !important;
+            }
+            .session-toggle label {
+                padding: 10px 14px !important;
+            }
+            .entry-card {
+                padding: 18px 14px !important;
+            }
+        }
     </style>
     <?php require_once ROOT . '/includes/faculty_sidebar.php'; ?>
 </head>
@@ -333,7 +353,7 @@ $active_nav = 'lecture-entry';
                 <a href="<?= BASE_URL ?>/faculty/dashboard.php" class="btn btn-outline" style="margin-top:12px;">Return to Dashboard</a>
             </div>
         <?php else: ?>
-            <div class="card" style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,0.03);">
+            <div class="card entry-card" style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,0.03);">
                 <form method="POST" id="lectureForm">
                     <div class="form-group">
                         <label class="form-label" for="course_id">Course / Subject (From Assigned Courses) *</label>
@@ -378,7 +398,7 @@ $active_nav = 'lecture-entry';
                         </div>
                     </div>
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                    <div class="form-row-2">
                         <div class="form-group">
                             <label class="form-label" for="lecture_date">Lecture Date *</label>
                             <input type="date" name="lecture_date" id="lecture_date" class="form-input" 

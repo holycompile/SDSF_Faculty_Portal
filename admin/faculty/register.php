@@ -125,6 +125,10 @@ $active_nav = 'faculty-register';
     justify-content: space-between;
 }
 .sem-block-header:first-child { margin-top: 0; }
+@media (max-width: 640px) {
+    .course-grid { grid-template-columns: 1fr !important; }
+    .card { padding: 18px 14px !important; }
+}
 </style>
 </head>
 <body>

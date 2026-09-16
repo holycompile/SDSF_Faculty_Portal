@@ -250,6 +250,13 @@ $active_nav = 'courses-list';
     justify-content: center;
     font-size: 14px;
 }
+@media (max-width: 768px) {
+    .tb-right .btn-sm span.btn-label { display: none; }
+    .tb-right { gap: 6px; }
+    .tb-right .btn-sm { padding: 6px 10px; }
+    .prog-pill { padding: 8px 12px; font-size: 12.5px; }
+    .sem-tab-btn { padding: 6px 12px; font-size: 12px; }
+}
 </style>
 </head>
 <body>
@@ -260,13 +267,13 @@ $active_nav = 'courses-list';
         <span class="tb-crumb"><?= htmlspecialchars($progName) ?></span>
     </div>
     <div class="tb-right" style="display:flex;gap:10px;align-items:center;">
-        <a href="<?= BASE_URL ?>/admin/courses/programs.php?from_prog=<?= urlencode($progName) ?>" class="btn btn-outline btn-sm">
+        <a href="<?= BASE_URL ?>/admin/courses/programs.php?from_prog=<?= urlencode($progName) ?>" class="btn btn-outline btn-sm" title="Manage Programs & Batches">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-            Manage Programs &amp; Batches
+            <span class="btn-label">Manage Programs</span>
         </a>
-        <a href="<?= BASE_URL ?>/admin/courses/add.php?program=<?= urlencode($progName) ?>" class="btn btn-primary btn-sm">
+        <a href="<?= BASE_URL ?>/admin/courses/add.php?program=<?= urlencode($progName) ?>" class="btn btn-primary btn-sm" title="Add New Subject">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            + Add New Subject
+            <span class="btn-label">+ Add Subject</span>
         </a>
     </div>
 </header>

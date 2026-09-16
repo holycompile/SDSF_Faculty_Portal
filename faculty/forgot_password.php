@@ -119,6 +119,12 @@ body { background: #0f172a; font-family: 'Inter', sans-serif; min-height: 100vh;
 .alert-ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }.input-wrap { position: relative; display: flex; align-items: center; }
 .eye-btn { position: absolute; right: 12px; background: none; border: none; cursor: pointer; color: #94a3b8; padding: 4px; display: flex; align-items: center; justify-content: center; }
 .eye-btn:hover { color: #2563eb; }
+@media(max-width:480px){
+    body { padding: 14px 10px; }
+    .card-header { padding: 22px 18px; }
+    .card-body { padding: 22px 16px; }
+    .btn-submit { padding: 11px; }
+}
 </style>
 </head>
 <body>

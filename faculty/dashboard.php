@@ -94,6 +94,20 @@ $active_nav = 'dashboard';
         .ft td { padding: 14px 20px; font-size: 14px; color: #334155; border-bottom: 1px solid #f8fafc; }
         .ft tr:last-child td { border-bottom: none; }
         .ft tr:hover td { background: #f8fafc; }
+
+        @media (max-width: 768px) {
+            .welcome-inner { padding: 16px 14px !important; }
+            .welcome-title { font-size: 18px !important; }
+            .welcome-btns { width: 100% !important; display: flex; flex-wrap: wrap; gap: 8px; }
+            .welcome-btns .btn { flex: 1 1 calc(50% - 6px); justify-content: center; font-size: 12px !important; padding: 8px 10px !important; }
+            .doc-form-wrap { padding: 14px 16px !important; }
+            .doc-form-wrap form > div { width: 100% !important; }
+            .doc-form-wrap select { width: 100% !important; }
+            .doc-form-wrap .btn { width: 100% !important; justify-content: center; }
+            .tb-right { gap: 6px; }
+            .tb-right .btn-sm { padding: 6px 10px; font-size: 12px; }
+            .btn-text-hide-sm { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -105,7 +119,7 @@ $active_nav = 'dashboard';
             <span class="tb-date"><?= date('l, d F Y') ?></span>
             <a href="<?= BASE_URL ?>/admin/reports/generate_html_pdf.php?faculty_id=<?= $facultyId ?>&month=<?= $currentMonth ?>&year=<?= $currentYear ?>" target="_blank" class="btn btn-outline btn-sm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                Download <?= date('F') ?> Bill (PDF)
+                <span>PDF <span class="btn-text-hide-sm">Bill</span></span>
             </a>
             <a href="<?= BASE_URL ?>/faculty/lecture_entry.php" class="btn btn-primary btn-sm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -123,7 +137,7 @@ $active_nav = 'dashboard';
 
         <!-- Welcome Banner -->
         <div class="card" style="margin-bottom:24px;background:linear-gradient(135deg,#eff6ff 0%,#ffffff 60%,#f0fdfa 100%);border-color:#bfdbfe;">
-            <div style="padding:24px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;">
+            <div class="welcome-inner" style="padding:24px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;">
                 <div style="display:flex;align-items:center;gap:18px;">
                     <div>
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
@@ -134,13 +148,13 @@ $active_nav = 'dashboard';
                                 <?= htmlspecialchars($faculty['department']) ?>
                             </span>
                         </div>
-                        <h1 style="font-size:22px;font-weight:800;color:#0f172a;margin:0 0 4px;">Welcome back, <?= htmlspecialchars($faculty['name']) ?>!</h1>
+                        <h1 class="welcome-title" style="font-size:22px;font-weight:800;color:#0f172a;margin:0 0 4px;">Welcome back, <?= htmlspecialchars($faculty['name']) ?>!</h1>
                         <p style="font-size:13.5px;color:#64748b;margin:0;">
                             SDSF Portal &bull; Enrollment No: <strong style="color:#1e3a8a;font-family:monospace;"><?= htmlspecialchars($faculty['faculty_enrollment_no']) ?></strong> &bull; Auto-billing: &#8377;800/hr (Theory) &bull; &#8377;400/hr (Practical)
                         </p>
                     </div>
                 </div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <div class="welcome-btns" style="display:flex;gap:8px;flex-wrap:wrap;">
                     <a href="<?= BASE_URL ?>/admin/reports/annexure_iv.php?faculty_id=<?= $facultyId ?>&month=<?= $currentMonth ?>&year=<?= $currentYear ?>" target="_blank" class="btn btn-outline" style="font-size:13px;padding:8px 14px;" title="Official Annexure-IV Bill">
                         📄 Annexure-IV
                     </a>
@@ -225,7 +239,7 @@ $active_nav = 'dashboard';
                 </div>
                 <span class="badge badge-blue">Official DAVV Formats</span>
             </div>
-            <div style="padding:20px 24px;">
+            <div class="doc-form-wrap" style="padding:20px 24px;">
                 <form method="GET" target="_blank" style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;">
                     <input type="hidden" name="faculty_id" value="<?= $facultyId ?>">
                     <div>

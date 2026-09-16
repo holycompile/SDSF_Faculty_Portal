@@ -428,12 +428,103 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             gap: 10px;
         }
 
+        /* Mobile & Responsive Adjustments */
         @media (max-width: 768px) {
-            .univ-header { flex-direction: column; align-items: flex-start; gap: 14px; padding: 14px 20px; }
-            .header-right { width: 100%; justify-content: space-between; }
-            .card-body { padding: 24px 20px; }
-            .title-univ { font-size: 13.5px; }
-            .title-dept { font-size: 12px; }
+            .univ-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+                padding: 12px 16px;
+            }
+            .header-left {
+                gap: 12px;
+            }
+            .davv-logo {
+                height: 48px;
+            }
+            .title-univ {
+                font-size: 13px;
+                line-height: 1.2;
+            }
+            .title-dept {
+                font-size: 11.5px;
+                line-height: 1.2;
+            }
+            .title-campus {
+                font-size: 10.5px;
+            }
+            .header-right {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            .dept-logo {
+                height: 42px;
+            }
+            .page-content {
+                padding: 20px 12px 40px;
+            }
+            .card-banner {
+                padding: 20px 18px 18px;
+            }
+            .portal-title {
+                font-size: 20px;
+            }
+            .card-body {
+                padding: 20px 16px 28px;
+            }
+            .tab-btn {
+                padding: 11px 8px;
+                font-size: 12.5px;
+                gap: 6px;
+            }
+            .btn-submit {
+                padding: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .top-strip {
+                font-size: 10.5px;
+                padding: 5px 10px;
+                line-height: 1.35;
+            }
+            .davv-logo {
+                height: 42px;
+            }
+            .title-univ {
+                font-size: 12px;
+            }
+            .title-dept {
+                font-size: 10.5px;
+            }
+            .title-campus {
+                display: none;
+            }
+            .portal-title {
+                font-size: 18px;
+            }
+            .tab-wrap {
+                gap: 2px;
+                padding: 3px;
+            }
+            .tab-btn {
+                font-size: 11.5px;
+                padding: 10px 4px;
+            }
+            .tab-btn svg {
+                width: 14px;
+                height: 14px;
+            }
+            .form-heading h2 {
+                font-size: 19px;
+            }
+            .form-input {
+                font-size: 13.5px;
+                padding-left: 38px;
+            }
+            .input-icon {
+                left: 11px;
+            }
         }
     </style>
 </head>

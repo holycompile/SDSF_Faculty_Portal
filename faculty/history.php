@@ -111,6 +111,30 @@ $totalCount  = count($lectures);
         .report-menu.show { display: block; }
         .report-menu a { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border-radius: 8px; color: #1e293b; text-decoration: none; font-size: 13px; font-weight: 500; transition: background 0.15s; }
         .report-menu a:hover { background: #f1f5f9; color: #1e3a8a; }
+
+        @media (max-width: 768px) {
+            .summary-metrics-grid {
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+            }
+            .date-filter-form {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+            }
+            .date-filter-form > div {
+                width: 100% !important;
+            }
+            .date-filter-form .btn-teal, .date-filter-form .btn-outline-teal {
+                flex: 1;
+                justify-content: center;
+                text-align: center;
+            }
+            .tb-right .btn-sm {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+        }
     </style>
     <?php require_once ROOT . '/includes/faculty_sidebar.php'; ?>
 </head>
@@ -216,7 +240,7 @@ $totalCount  = count($lectures);
 
         <!-- Date Filter -->
         <div class="card" style="margin-bottom:24px;padding:16px 24px;">
-            <form method="GET" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+            <form method="GET" class="date-filter-form" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
                 <?php if ($filterCourse > 0): ?><input type="hidden" name="course_id" value="<?= $filterCourse ?>"><?php endif; ?>
                 <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -248,7 +272,7 @@ $totalCount  = count($lectures);
         </div>
 
         <!-- Summary Metric Cards -->
-        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:16px;margin-bottom:24px;">
+        <div class="summary-metrics-grid" style="display:grid;grid-template-columns:repeat(3, 1fr);gap:16px;margin-bottom:24px;">
             <div class="card" style="padding:18px 22px;">
                 <div style="font-size:11.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;">Sessions in View</div>
                 <div style="font-size:24px;font-weight:800;color:#0f172a;margin-top:2px;"><?= $totalCount ?></div>

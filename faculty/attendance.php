@@ -187,6 +187,20 @@ $active_nav = 'attendance';
     justify-content: center;
     padding: 20px;
 }
+@media(max-width: 640px) {
+    .modal-overlay {
+        padding: 10px;
+    }
+    .modal-card-box {
+        width: 100% !important;
+        max-height: 94vh !important;
+        border-radius: 14px !important;
+    }
+    .tb-right .btn-sm {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+}
 </style>
 </head>
 <body>
@@ -560,7 +574,7 @@ $active_nav = 'attendance';
 
     <!-- Attendance Sheet Modal -->
     <div id="attModal" class="modal-overlay">
-        <div style="background:#fff;border-radius:20px;max-width:620px;width:95%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.22);animation:fadeUp .2s ease both;">
+        <div class="modal-card-box" style="background:#fff;border-radius:20px;max-width:620px;width:95%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.22);animation:fadeUp .2s ease both;">
             <div style="padding:20px 24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
                 <div>
                     <h3 style="font-size:17px;font-weight:800;color:#0f172a;margin:0;" id="modalTitle">Lecture Attendance Sheet</h3>

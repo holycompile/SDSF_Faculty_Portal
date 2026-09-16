@@ -414,6 +414,36 @@ input[type="checkbox"].cohort-select-all {
     cursor: pointer;
     vertical-align: middle;
 }
+@media (max-width: 768px) {
+    .tb-right a.btn-sm span.btn-label, .tb-right button.btn-sm span.btn-label {
+        display: none;
+    }
+    .tb-right {
+        gap: 6px;
+    }
+    .tb-right .btn-sm {
+        padding: 6px 10px;
+    }
+    .bulk-action-bar {
+        left: 50% !important;
+        transform: translateX(-50%) translateY(100px);
+        width: 94vw !important;
+        padding: 10px 14px;
+        gap: 8px;
+        justify-content: space-between;
+    }
+    .bulk-action-bar.visible {
+        transform: translateX(-50%) translateY(0) !important;
+    }
+    .prog-pill {
+        padding: 8px 12px;
+        font-size: 12.5px;
+    }
+    .sem-tab-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+}
 </style>
 </head>
 <body>
@@ -426,17 +456,17 @@ input[type="checkbox"].cohort-select-all {
             <span class="tb-crumb">Student Rosters</span>
         </div>
         <div class="tb-right">
-            <a href="<?= BASE_URL ?>/admin/courses/list.php?program=<?= urlencode($progName) ?>" class="btn btn-outline btn-sm">
+            <a href="<?= BASE_URL ?>/admin/courses/list.php?program=<?= urlencode($progName) ?>" class="btn btn-outline btn-sm" title="Course Curriculum">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                Course Curriculum
+                <span class="btn-label">Course Curriculum</span>
             </a>
-            <a href="<?= BASE_URL ?>/admin/students/attendance.php" class="btn btn-outline btn-sm">
+            <a href="<?= BASE_URL ?>/admin/students/attendance.php" class="btn btn-outline btn-sm" title="Attendance Logs">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                Attendance Logs
+                <span class="btn-label">Attendance Logs</span>
             </a>
-            <button type="button" onclick="openQuickAddModal('<?= $progId ?>', '<?= htmlspecialchars(addslashes($filterSem !== 'all' ? $filterSem : '1st Semester')) ?>')" class="btn btn-primary btn-sm">
+            <button type="button" onclick="openQuickAddModal('<?= $progId ?>', '<?= htmlspecialchars(addslashes($filterSem !== 'all' ? $filterSem : '1st Semester')) ?>')" class="btn btn-primary btn-sm" title="Add Student">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                + Add Student
+                <span class="btn-label">+ Add Student</span>
             </button>
         </div>
     </header>

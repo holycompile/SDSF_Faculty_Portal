@@ -71,6 +71,10 @@ $active_nav = 'change-password';
 .input-wrap { position: relative; display: flex; align-items: center; }
 .eye-btn { position: absolute; right: 12px; background: none; border: none; cursor: pointer; color: #94a3b8; padding: 4px; display: flex; align-items: center; justify-content: center; }
 .eye-btn:hover { color: #0d9488; }
+@media(max-width: 480px){
+    .form-card { padding: 20px 16px; }
+    .btn-save { width: 100%; justify-content: center; }
+}
 </style>
 </head>
 <body>

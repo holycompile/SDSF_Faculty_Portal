@@ -93,12 +93,140 @@ table.dt{width:100%;border-collapse:collapse;}
 .alert-info{background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .fade-up{animation:fadeUp .4s ease both;}
+
+/* Mobile & Responsive Navigation */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 998;
+    opacity: 0;
+    transition: opacity .25s ease;
+}
+.sidebar-overlay.open {
+    display: block;
+    opacity: 1;
+}
+.sidebar-toggle-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    background: #f8fafc;
+    border: 1.5px solid var(--border);
+    color: var(--bright);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all .2s;
+    padding: 0;
+}
+.sidebar-toggle-btn:hover {
+    background: #eef2ff;
+    color: var(--accent);
+    border-color: var(--accent-border);
+}
+.sb-close-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    margin-left: auto;
+    transition: all .15s;
+}
+.sb-close-btn:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+body.sidebar-open {
+    overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform .28s cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 1000;
+        box-shadow: 8px 0 30px rgba(0,0,0,0.15);
+    }
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    .sb-close-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .main {
+        margin-left: 0 !important;
+        width: 100%;
+        min-width: 0;
+    }
+    .sidebar-toggle-btn {
+        display: inline-flex;
+    }
+    .topbar {
+        padding: 0 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .topbar {
+        height: auto;
+        min-height: var(--hh);
+        padding: 10px 14px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .tb-date {
+        display: none;
+    }
+    .tb-crumb {
+        font-size: 14px;
+        max-width: 180px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .page {
+        padding: 16px 12px;
+    }
+    .page-header h1 {
+        font-size: 19px;
+    }
+    .grid-2, .grid-3, .content-row {
+        grid-template-columns: 1fr !important;
+    }
+    .card-head {
+        padding: 14px 16px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .dt th, .dt td {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+}
 </style>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-<aside class="sidebar">
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
+
+<aside class="sidebar" id="adminSidebar">
     <div class="sb-logo">
         <div class="sb-logos-wrap">
             <img src="<?= BASE_URL ?>/assets/departmentlogo_transparent.png" alt="SDSF" class="logo-dept">
@@ -107,6 +235,9 @@ table.dt{width:100%;border-collapse:collapse;}
             <div class="sb-title">SDSF Portal</div>
             <div class="sb-sub">Admin Panel</div>
         </div>
+        <button type="button" class="sb-close-btn" onclick="toggleSidebar(false)" aria-label="Close navigation menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
     </div>
 
     <nav class="sb-nav">
@@ -181,3 +312,46 @@ table.dt{width:100%;border-collapse:collapse;}
     </div>
 </aside>
 <div class="main">
+<script>
+function toggleSidebar(open) {
+    var sb = document.getElementById('adminSidebar');
+    var ov = document.getElementById('sidebarOverlay');
+    if (!sb) return;
+    var shouldOpen = (open !== undefined) ? open : !sb.classList.contains('open');
+    sb.classList.toggle('open', shouldOpen);
+    if (ov) ov.classList.toggle('open', shouldOpen);
+    document.body.classList.toggle('sidebar-open', shouldOpen);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var topbarLeft = document.querySelector('.topbar .tb-left');
+    if (topbarLeft && !topbarLeft.querySelector('.sidebar-toggle-btn')) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'sidebar-toggle-btn';
+        btn.setAttribute('aria-label', 'Open navigation menu');
+        btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
+        btn.onclick = function() { toggleSidebar(true); };
+        topbarLeft.insertBefore(btn, topbarLeft.firstChild);
+    }
+    
+    document.querySelectorAll('.sidebar .nav-link').forEach(function(link) {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 1024) toggleSidebar(false);
+        });
+    });
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') toggleSidebar(false);
+    });
+
+    document.querySelectorAll('table.dt, table.ft').forEach(function(table) {
+        if (!table.parentElement.classList.contains('table-responsive') && !table.parentElement.style.overflowX) {
+            var wrapper = document.createElement('div');
+            wrapper.className = 'table-responsive';
+            table.parentNode.insertBefore(wrapper, table);
+            wrapper.appendChild(table);
+        }
+    });
+});
+</script>
