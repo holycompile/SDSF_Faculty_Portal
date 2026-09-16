@@ -592,16 +592,16 @@ $active_nav = 'attendance';
                 <input type="hidden" name="lecture_id" id="modalLectureId" value="">
 
                 <div style="padding:14px 24px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-                    <div style="font-size:12.5px;font-weight:700;color:#0f172a;" id="modalAttSummary">
-                        Summary
-                    </div>
-                    <div style="display:flex;gap:8px;">
-                        <button type="button" onclick="modalMarkAll('present')" class="btn btn-outline btn-sm" style="font-size:11.5px;padding:3px 9px;background:#f0fdf4;border-color:#bbf7d0;color:#16a34a;font-weight:700;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <button type="button" onclick="modalMarkAll('present')" style="font-size:12.5px;padding:7px 15px;background:#16a34a;color:#ffffff;font-weight:700;border:1px solid #15803d;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 3px rgba(22,163,74,0.25);">
                             ✓ All Present
                         </button>
-                        <button type="button" onclick="modalMarkAll('absent')" class="btn btn-outline btn-sm" style="font-size:11.5px;padding:3px 9px;background:#fef2f2;border-color:#fecaca;color:#dc2626;font-weight:700;">
+                        <button type="button" onclick="modalMarkAll('absent')" style="font-size:12.5px;padding:7px 15px;background:#dc2626;color:#ffffff;font-weight:700;border:1px solid #b91c1c;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 3px rgba(220,38,38,0.25);">
                             ✕ All Absent
                         </button>
+                    </div>
+                    <div style="font-size:12.5px;font-weight:700;color:#0f172a;" id="modalAttSummary">
+                        Summary
                     </div>
                 </div>
 

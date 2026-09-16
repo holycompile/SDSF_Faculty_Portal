@@ -24,11 +24,12 @@ if (!$isAdmin && !$isFaculty) {
     exit;
 }
 
-$month = (int)($_GET['month'] ?? date('m'));
-if ($month < 1 || $month > 12) $month = (int)date('m');
+$year = (int)($_GET['year'] ?? 2026);
+if ($year < 2026 || $year > 2035) $year = 2026;
 
-$year = (int)($_GET['year'] ?? date('Y'));
-if ($year < 2020 || $year > 2035) $year = (int)date('Y');
+$month = (int)($_GET['month'] ?? 9);
+if ($year === 2026 && $month < 9) $month = 9;
+if ($month < 1 || $month > 12) $month = 9;
 
 // Fetch Faculty Record
 $fStmt = $pdo->prepare("SELECT * FROM faculty_members WHERE id = ?");
@@ -265,15 +266,15 @@ function renderReportNavBar(string $activeKey, int $facultyId, int $month, int $
     }
 
     $monthOptions = '';
-    for ($m = 1; $m <= 12; $m++) {
+    $startMonth = ($year === 2026) ? 9 : 1;
+    for ($m = $startMonth; $m <= 12; $m++) {
         $sel = ($m === $month) ? 'selected' : '';
         $mName = date('F', mktime(0,0,0,$m,1));
         $monthOptions .= "<option value='{$m}' {$sel}>{$mName}</option>";
     }
 
     $yearOptions = '';
-    $currY = (int)date('Y');
-    for ($y = $currY - 2; $y <= $currY + 2; $y++) {
+    for ($y = 2026; $y <= 2028; $y++) {
         $sel = ($y === $year) ? 'selected' : '';
         $yearOptions .= "<option value='{$y}' {$sel}>{$y}</option>";
     }

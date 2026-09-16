@@ -52,9 +52,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$department) $errors[] = 'Department is required.';
     if (empty($course_ids)) $errors[] = 'Please assign at least one course.';
 
+    $customEnrollmentNo = strtoupper(trim($_POST['faculty_enrollment_no'] ?? ''));
+    if ($customEnrollmentNo !== '') {
+        if (!preg_match('/^[A-Z0-9_-]{3,20}$/', $customEnrollmentNo)) {
+            $errors[] = 'Enrollment number must be 3 to 20 alphanumeric characters (letters, numbers, hyphens, underscores).';
+        } else {
+            $chk = $pdo->prepare("SELECT COUNT(*) FROM faculty_members WHERE faculty_enrollment_no = ?");
+            $chk->execute([$customEnrollmentNo]);
+            if ((int)$chk->fetchColumn() > 0) {
+                $errors[] = "Enrollment number '{$customEnrollmentNo}' is already registered to another faculty member.";
+            }
+        }
+    }
+
     if (empty($errors)) {
         try {
-            $enrollment_no = generateEnrollmentNo($name, $pdo);
+            $enrollment_no = ($customEnrollmentNo !== '') ? $customEnrollmentNo : generateEnrollmentNo($name, $pdo);
             $initial_password = 'SDSF@' . substr($enrollment_no, -4);
 
             $stmt = $pdo->prepare("INSERT INTO faculty_members
@@ -186,6 +199,29 @@ $active_nav = 'faculty-register';
                         <input type="text" name="qualification" class="form-input" placeholder="e.g. M.Tech, Ph.D, MBA" value="<?= htmlspecialchars($_POST['qualification'] ?? '') ?>" required>
                     </div>
                 </div>
+                <div class="form-group" style="background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px;">
+                        <label class="form-label" style="margin-bottom:0;color:#1e3a8a;font-weight:700;display:flex;align-items:center;gap:6px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <span>Faculty Enrollment Number</span>
+                            <span style="font-size:11.5px;color:#64748b;font-weight:500;">(Manual entry or auto-generated)</span>
+                        </label>
+                        <button type="button" onclick="suggestEnrollmentNo()" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;padding:3px 10px;font-size:11.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                            ⚡ Auto-Generate From Name
+                        </button>
+                    </div>
+                    <div style="position:relative;">
+                        <input type="text" name="faculty_enrollment_no" id="faculty_enrollment_no" class="form-input" 
+                               placeholder="e.g. RITI0001 (Leave blank to generate automatically)" 
+                               value="<?= htmlspecialchars($_POST['faculty_enrollment_no'] ?? '') ?>" 
+                               maxlength="20"
+                               style="font-family:monospace;font-size:14.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1e3a8a;background:#ffffff;">
+                    </div>
+                    <div style="font-size:12px;color:#64748b;margin-top:6px;">
+                        Admin can manually enter an institutional enrollment number, or leave blank to automatically generate sequential code.
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Department / School *</label>
                     <input type="text" name="department" class="form-input" placeholder="e.g. SDSF, IIPS, School of Commerce" value="<?= htmlspecialchars($_POST['department'] ?? 'School of Data Science & Forecasting') ?>" required>
@@ -343,6 +379,21 @@ $active_nav = 'faculty-register';
 </div>
 
 <script>
+function suggestEnrollmentNo() {
+    const nameInput = document.querySelector('input[name="name"]');
+    const enrollInput = document.getElementById('faculty_enrollment_no');
+    if (!nameInput || !enrollInput) return;
+    const nameVal = (nameInput.value || '').trim();
+    if (!nameVal) {
+        alert('Please enter the faculty member name first.');
+        nameInput.focus();
+        return;
+    }
+    const clean = nameVal.replace(/[^A-Za-z]/g, '').toUpperCase();
+    const prefix = (clean.length >= 4 ? clean.substring(0, 4) : clean.padEnd(4, 'X'));
+    enrollInput.value = prefix + '0001';
+}
+
 function updateCount() {
     const checked = document.querySelectorAll('input[name="course_ids[]"]:checked').length;
     document.getElementById('selected-count').textContent = checked + ' selected';

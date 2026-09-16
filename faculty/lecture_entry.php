@@ -124,11 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $attMsg = " Attendance recorded: {$presentCount}/{$totalMarked} students present.";
             }
 
-            if ($monthTotal > 30000) {
-                setFlash('warning', "Lecture session logged (Remuneration: Rs. " . number_format($amount, 2) . ")!{$attMsg} Note: Monthly total is Rs. " . number_format($monthTotal, 2) . ", which exceeds the Rs. 30,000 ceiling.");
-            } else {
-                setFlash('success', "Lecture session saved successfully! Calculated remuneration: Rs. " . number_format($amount, 2) . ".{$attMsg}");
-            }
+            setFlash('success', "Lecture session & attendance logged successfully!");
 
             header('Location: ' . BASE_URL . '/faculty/dashboard.php');
             exit;
@@ -293,6 +289,40 @@ $active_nav = 'lecture-entry';
             font-weight: 800;
             font-family: monospace;
         }
+        .btn-att-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 18px;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+        .btn-all-present {
+            background: #16a34a !important;
+            color: #ffffff !important;
+            border-color: #15803d !important;
+        }
+        .btn-all-present:hover {
+            background: #15803d !important;
+            box-shadow: 0 2px 6px rgba(22,163,74,0.35) !important;
+            transform: translateY(-1px);
+        }
+        .btn-all-absent {
+            background: #dc2626 !important;
+            color: #ffffff !important;
+            border-color: #b91c1c !important;
+        }
+        .btn-all-absent:hover {
+            background: #b91c1c !important;
+            box-shadow: 0 2px 6px rgba(220,38,38,0.35) !important;
+            transform: translateY(-1px);
+        }
         .form-row-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -387,13 +417,13 @@ $active_nav = 'lecture-entry';
                             <input type="radio" name="session_type" id="type_t" value="T" checked onchange="calculateRemuneration()">
                             <label for="type_t">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                                Theory Lecture (₹<?= number_format($facTheoryRate, 0) ?>/hr)
+                                Theory Lecture
                             </label>
 
                             <input type="radio" name="session_type" id="type_p" value="P" onchange="calculateRemuneration()">
                             <label for="type_p">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                                Practical / Lab (₹<?= number_format($facPracticalRate, 0) ?>/hr)
+                                Practical / Lab
                             </label>
                         </div>
                     </div>
@@ -415,6 +445,7 @@ $active_nav = 'lecture-entry';
 
                     <!-- Student Attendance Register for Selected Course -->
                     <div id="attendanceSection" style="margin-top:24px;margin-bottom:24px;border:1.5px solid #e2e8f0;border-radius:14px;background:#ffffff;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                        <!-- Register Header -->
                         <div style="background:#f8fafc;padding:14px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
                             <div style="display:flex;align-items:center;gap:10px;">
                                 <div style="width:34px;height:34px;border-radius:8px;background:#eef2ff;color:#4f46e5;display:flex;align-items:center;justify-content:center;">
@@ -429,17 +460,24 @@ $active_nav = 'lecture-entry';
                                     </div>
                                 </div>
                             </div>
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <button type="button" class="btn btn-outline btn-sm" onclick="markAllAttendance('present')" style="font-size:12px;padding:4px 10px;background:#f0fdf4;border-color:#bbf7d0;color:#16a34a;font-weight:700;">
-                                    ✓ All Present
-                                </button>
-                                <button type="button" class="btn btn-outline btn-sm" onclick="markAllAttendance('absent')" style="font-size:12px;padding:4px 10px;background:#fef2f2;border-color:#fecaca;color:#dc2626;font-weight:700;">
-                                    ✕ All Absent
-                                </button>
-                                <span id="attSummaryBadge" style="font-size:12px;font-weight:700;color:#1e3a8a;background:#eff6ff;padding:4px 10px;border-radius:8px;border:1px solid #bfdbfe;">
+                            <div>
+                                <span id="attSummaryBadge" style="font-size:12px;font-weight:700;color:#1e3a8a;background:#eff6ff;padding:5px 12px;border-radius:8px;border:1px solid #bfdbfe;display:inline-block;">
                                     0 Present &bull; 0 Absent
                                 </span>
                             </div>
+                        </div>
+
+                        <!-- Action Bar: Proper buttons placed on left side above the marking section -->
+                        <div style="background:#ffffff;padding:12px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:flex-start;gap:10px;flex-wrap:wrap;">
+                            <button type="button" class="btn-att-action btn-all-present" onclick="markAllAttendance('present')">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span>All Present</span>
+                            </button>
+                            <button type="button" class="btn-att-action btn-all-absent" onclick="markAllAttendance('absent')">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                <span>All Absent</span>
+                            </button>
+                            <span style="font-size:12px;color:#64748b;margin-left:6px;">Quick bulk action for entire cohort</span>
                         </div>
 
                         <!-- Student Rows Container -->
@@ -463,34 +501,6 @@ $active_nav = 'lecture-entry';
                                 <tbody id="attTbody">
                                 </tbody>
                             </table>
-                        </div>
-                    </div>
-
-                    <!-- Live Calculation Preview -->
-                    <div class="calc-box">
-                        <div style="font-size:12px;font-weight:800;color:#4338ca;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
-                            Automated Remuneration Preview
-                        </div>
-                        <div class="calc-row">
-                            <span style="color:#64748b;">Subject Credits (L T P):</span>
-                            <span id="previewLtp" style="font-family:monospace;font-weight:800;color:#0f172a;">—</span>
-                        </div>
-                        <div class="calc-row">
-                            <span style="color:#64748b;">Session Type:</span>
-                            <span id="previewSessionType" style="font-weight:600;color:#0f172a;">Theory Lecture</span>
-                        </div>
-                        <div class="calc-row">
-                            <span style="color:#64748b;">Configured Hourly Rate:</span>
-                            <span id="previewRate" style="font-weight:700;color:#0f172a;">₹<?= number_format($facTheoryRate, 2) ?> / hr</span>
-                        </div>
-                        <div class="calc-row">
-                            <span style="color:#64748b;">Duration:</span>
-                            <span id="previewHours" style="font-weight:600;color:#0f172a;">1.0 Hour</span>
-                        </div>
-                        <div class="calc-row">
-                            <span style="font-size:15px;font-weight:800;color:#0f172a;">Total Remuneration:</span>
-                            <span id="previewAmount" style="font-size:19px;font-weight:800;color:#047857;">&#8377;<?= number_format($facTheoryRate, 2) ?></span>
                         </div>
                     </div>
 
@@ -519,15 +529,22 @@ $active_nav = 'lecture-entry';
         const currentRate = isPractical ? practicalRate : theoryRate;
         const total = hours * currentRate;
 
-        document.getElementById('previewSessionType').textContent = isPractical ? 'Practical / Lab Class' : 'Theory Lecture';
-        document.getElementById('previewRate').textContent = '₹' + currentRate.toFixed(2) + ' / hr';
-        document.getElementById('previewHours').textContent = hours.toFixed(1) + ' Hours';
-        document.getElementById('previewAmount').innerHTML = '&#8377;' + total.toFixed(2);
+        const elSession = document.getElementById('previewSessionType');
+        if (elSession) elSession.textContent = isPractical ? 'Practical / Lab Class' : 'Theory Lecture';
+        const elRate = document.getElementById('previewRate');
+        if (elRate) elRate.textContent = '₹' + currentRate.toFixed(2) + ' / hr';
+        const elHours = document.getElementById('previewHours');
+        if (elHours) elHours.textContent = hours.toFixed(1) + ' Hours';
+        const elAmount = document.getElementById('previewAmount');
+        if (elAmount) elAmount.innerHTML = '&#8377;' + total.toFixed(2);
 
-        if (selectedOption && selectedOption.value) {
-            document.getElementById('previewLtp').textContent = selectedOption.getAttribute('data-ltp') || '—';
-        } else {
-            document.getElementById('previewLtp').textContent = '—';
+        const elLtp = document.getElementById('previewLtp');
+        if (elLtp) {
+            if (selectedOption && selectedOption.value) {
+                elLtp.textContent = selectedOption.getAttribute('data-ltp') || '—';
+            } else {
+                elLtp.textContent = '—';
+            }
         }
     }
 

@@ -115,6 +115,11 @@ $active_nav = 'faculty-list';
                 &larr; <span class="btn-label">Back</span>
             </a>
 
+            <a href="<?= BASE_URL ?>/admin/faculty/edit.php?id=<?= $faculty['id'] ?>" class="btn btn-outline btn-sm" style="display:inline-flex;align-items:center;gap:6px;border-color:#c7d2fe;color:#4338ca;background:#eff6ff;" title="Edit Faculty Profile &amp; Enrollment No.">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <span>Edit Faculty</span>
+            </a>
+
             <!-- Official Reports Dropdown (compact, never wraps) -->
             <div class="report-dropdown">
                 <button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation();document.getElementById('reportMenu').classList.toggle('show');" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
@@ -160,12 +165,17 @@ $active_nav = 'faculty-list';
                         <?= strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $faculty['name']), 0, 2)) ?>
                     </div>
                     <div>
-                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap;">
                             <h1 style="font-size:22px;font-weight:800;color:#0f172a;margin:0;"><?= htmlspecialchars($faculty['name']) ?></h1>
-                            <span style="font-family:monospace;font-size:13px;font-weight:700;background:#eef2ff;color:#4f46e5;padding:4px 10px;border-radius:6px;border:1px solid #c7d2fe;">
-                                <?= htmlspecialchars($faculty['faculty_enrollment_no']) ?>
+                            <span style="font-family:monospace;font-size:13px;font-weight:700;background:#eef2ff;color:#4f46e5;padding:4px 10px;border-radius:6px;border:1px solid #c7d2fe;display:inline-flex;align-items:center;gap:6px;">
+                                <span><?= htmlspecialchars($faculty['faculty_enrollment_no']) ?></span>
+                                <a href="<?= BASE_URL ?>/admin/faculty/edit.php?id=<?= $faculty['id'] ?>" title="Edit Profile &amp; Enrollment No." style="color:#6366f1;display:inline-flex;align-items:center;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </a>
                             </span>
-                            <span class="badge badge-green">Active Visiting Faculty</span>
+                            <?= ($faculty['status'] ?? 'active') === 'active' 
+                                ? '<span class="badge badge-green">Active Visiting Faculty</span>' 
+                                : '<span class="badge" style="background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;">Inactive</span>' ?>
                         </div>
                         <p style="color:#64748b;font-size:14px;margin:0;">
                             <?= htmlspecialchars($faculty['qualification']) ?> &bull; <?= htmlspecialchars($faculty['department']) ?>

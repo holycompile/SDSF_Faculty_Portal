@@ -56,6 +56,8 @@ $stats = $sStmt->fetch();
 // Current month stats
 $currentMonth = (int)date('m');
 $currentYear  = (int)date('Y');
+$annexureStartYear = max(2026, $currentYear);
+$annexureStartMonth = ($annexureStartYear == 2026) ? max(9, $currentMonth) : $currentMonth;
 $mStmt = $pdo->prepare("
     SELECT COALESCE(SUM(hours), 0) as m_hours,
            COALESCE(SUM(amount), 0) as m_amount,
@@ -117,7 +119,7 @@ $active_nav = 'dashboard';
         </div>
         <div class="tb-right">
             <span class="tb-date"><?= date('l, d F Y') ?></span>
-            <a href="<?= BASE_URL ?>/admin/reports/generate_html_pdf.php?faculty_id=<?= $facultyId ?>&month=<?= $currentMonth ?>&year=<?= $currentYear ?>" target="_blank" class="btn btn-outline btn-sm">
+            <a href="<?= BASE_URL ?>/admin/reports/generate_html_pdf.php?faculty_id=<?= $facultyId ?>&month=<?= $annexureStartMonth ?>&year=<?= $annexureStartYear ?>" target="_blank" class="btn btn-outline btn-sm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
                 <span>PDF <span class="btn-text-hide-sm">Bill</span></span>
             </a>
@@ -150,18 +152,18 @@ $active_nav = 'dashboard';
                         </div>
                         <h1 class="welcome-title" style="font-size:22px;font-weight:800;color:#0f172a;margin:0 0 4px;">Welcome back, <?= htmlspecialchars($faculty['name']) ?>!</h1>
                         <p style="font-size:13.5px;color:#64748b;margin:0;">
-                            SDSF Portal &bull; Enrollment No: <strong style="color:#1e3a8a;font-family:monospace;"><?= htmlspecialchars($faculty['faculty_enrollment_no']) ?></strong> &bull; Auto-billing: &#8377;800/hr (Theory) &bull; &#8377;400/hr (Practical)
+                            SDSF Portal &bull; Enrollment No: <strong style="color:#1e3a8a;font-family:monospace;"><?= htmlspecialchars($faculty['faculty_enrollment_no']) ?></strong>
                         </p>
                     </div>
                 </div>
                 <div class="welcome-btns" style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <a href="<?= BASE_URL ?>/admin/reports/annexure_iv.php?faculty_id=<?= $facultyId ?>&month=<?= $currentMonth ?>&year=<?= $currentYear ?>" target="_blank" class="btn btn-outline" style="font-size:13px;padding:8px 14px;" title="Official Annexure-IV Bill">
+                    <a href="<?= BASE_URL ?>/admin/reports/annexure_iv.php?faculty_id=<?= $facultyId ?>&month=<?= $annexureStartMonth ?>&year=<?= $annexureStartYear ?>" target="_blank" class="btn btn-outline" style="font-size:13px;padding:8px 14px;" title="Official Annexure-IV Bill">
                         📄 Annexure-IV
                     </a>
-                    <a href="<?= BASE_URL ?>/admin/reports/visiting_faculty_attendance.php?faculty_id=<?= $facultyId ?>&month=<?= $currentMonth ?>&year=<?= $currentYear ?>" target="_blank" class="btn btn-outline" style="font-size:13px;padding:8px 14px;" title="Visiting Faculty Teaching Attendance">
+                    <a href="<?= BASE_URL ?>/admin/reports/visiting_faculty_attendance.php?faculty_id=<?= $facultyId ?>&month=<?= $annexureStartMonth ?>&year=<?= $annexureStartYear ?>" target="_blank" class="btn btn-outline" style="font-size:13px;padding:8px 14px;" title="Visiting Faculty Teaching Attendance">
                         📊 Attendance
                     </a>
-                    <a href="<?= BASE_URL ?>/admin/reports/detailed_remuneration.php?faculty_id=<?= $facultyId ?>&month=<?= $currentMonth ?>&year=<?= $currentYear ?>" target="_blank" class="btn btn-outline" style="font-size:13px;padding:8px 14px;" title="Annexure IV-A Detailed Remuneration">
+                    <a href="<?= BASE_URL ?>/admin/reports/detailed_remuneration.php?faculty_id=<?= $facultyId ?>&month=<?= $annexureStartMonth ?>&year=<?= $annexureStartYear ?>" target="_blank" class="btn btn-outline" style="font-size:13px;padding:8px 14px;" title="Annexure IV-A Detailed Remuneration">
                         📋 Annexure IV-A
                     </a>
                     <a href="<?= BASE_URL ?>/faculty/lecture_entry.php" class="btn btn-primary" style="padding:10px 18px;font-size:13.5px;">
@@ -243,20 +245,23 @@ $active_nav = 'dashboard';
                 <form method="GET" target="_blank" style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;">
                     <input type="hidden" name="faculty_id" value="<?= $facultyId ?>">
                     <div>
-                        <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Month</label>
-                        <select name="month" class="form-select" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:160px;font-family:'Inter',sans-serif;outline:none;">
-                            <?php for ($m = 1; $m <= 12; $m++): ?>
-                                <option value="<?= $m ?>" <?= $m == $currentMonth ? 'selected' : '' ?>>
-                                    <?= date('F', mktime(0,0,0,$m,1)) ?>
-                                </option>
+                        <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Year</label>
+                        <select name="year" id="docYear" class="form-select" onchange="updateDocMonths()" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:120px;font-family:'Inter',sans-serif;outline:none;">
+                            <?php for ($y = 2026; $y <= 2028; $y++): ?>
+                                <option value="<?= $y ?>" <?= $y == max(2026, $currentYear) ? 'selected' : '' ?>><?= $y ?></option>
                             <?php endfor; ?>
                         </select>
                     </div>
                     <div>
-                        <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Year</label>
-                        <select name="year" class="form-select" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:120px;font-family:'Inter',sans-serif;outline:none;">
-                            <?php for ($y = 2024; $y <= 2028; $y++): ?>
-                                <option value="<?= $y ?>" <?= $y == $currentYear ? 'selected' : '' ?>><?= $y ?></option>
+                        <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Month</label>
+                        <select name="month" id="docMonth" class="form-select" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:160px;font-family:'Inter',sans-serif;outline:none;">
+                            <?php 
+                            $startMonth = (max(2026, $currentYear) == 2026) ? 9 : 1;
+                            $selectedMonth = max($startMonth, $currentMonth);
+                            for ($m = $startMonth; $m <= 12; $m++): ?>
+                                <option value="<?= $m ?>" <?= $m == $selectedMonth ? 'selected' : '' ?>>
+                                    <?= date('F', mktime(0,0,0,$m,1)) ?>
+                                </option>
                             <?php endfor; ?>
                         </select>
                     </div>
@@ -471,5 +476,32 @@ $active_nav = 'dashboard';
         </div>
     </div>
 </div>
+<script>
+function updateDocMonths() {
+    const ySel = document.getElementById('docYear');
+    const mSel = document.getElementById('docMonth');
+    if (!ySel || !mSel) return;
+    
+    const year = parseInt(ySel.value, 10);
+    const prevVal = parseInt(mSel.value, 10);
+    const startM = (year === 2026) ? 9 : 1;
+    
+    const names = [
+        "", "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+    
+    mSel.innerHTML = '';
+    for (let m = startM; m <= 12; m++) {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = names[m];
+        if (m === prevVal || (prevVal < startM && m === startM)) {
+            opt.selected = true;
+        }
+        mSel.appendChild(opt);
+    }
+}
+</script>
 </body>
 </html>

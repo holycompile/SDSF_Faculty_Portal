@@ -150,14 +150,18 @@ $totalCount  = count($lectures);
                     <span>Official Reports</span>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
+                <?php
+                $repYear = $filterYear ?: max(2026, (int)date('Y'));
+                $repMonth = $filterMonth ?: (($repYear == 2026) ? max(9, (int)date('m')) : (int)date('m'));
+                ?>
                 <div id="historyReportMenu" class="report-menu">
-                    <a href="<?= BASE_URL ?>/admin/reports/annexure_iv.php?faculty_id=<?= $facultyId ?>&month=<?= $filterMonth ?: date('m') ?>&year=<?= $filterYear ?: date('Y') ?>" target="_blank">
+                    <a href="<?= BASE_URL ?>/admin/reports/annexure_iv.php?faculty_id=<?= $facultyId ?>&month=<?= $repMonth ?>&year=<?= $repYear ?>" target="_blank">
                         📄 Annexure-IV (Claim Bill)
                     </a>
-                    <a href="<?= BASE_URL ?>/admin/reports/visiting_faculty_attendance.php?faculty_id=<?= $facultyId ?>&month=<?= $filterMonth ?: date('m') ?>&year=<?= $filterYear ?: date('Y') ?>" target="_blank">
+                    <a href="<?= BASE_URL ?>/admin/reports/visiting_faculty_attendance.php?faculty_id=<?= $facultyId ?>&month=<?= $repMonth ?>&year=<?= $repYear ?>" target="_blank">
                         📊 Teaching Attendance Sheet
                     </a>
-                    <a href="<?= BASE_URL ?>/admin/reports/detailed_remuneration.php?faculty_id=<?= $facultyId ?>&month=<?= $filterMonth ?: date('m') ?>&year=<?= $filterYear ?: date('Y') ?>" target="_blank">
+                    <a href="<?= BASE_URL ?>/admin/reports/detailed_remuneration.php?faculty_id=<?= $facultyId ?>&month=<?= $repMonth ?>&year=<?= $repYear ?>" target="_blank">
                         📋 Annexure IV-A (Detailed Sheet)
                     </a>
                 </div>
@@ -259,7 +263,7 @@ $totalCount  = count($lectures);
                     <label class="form-label">Year</label>
                     <select name="year" class="form-select" style="width:100%;">
                         <option value="0">All Years</option>
-                        <?php for ($y = 2024; $y <= 2028; $y++): ?>
+                        <?php for ($y = 2026; $y <= 2028; $y++): ?>
                             <option value="<?= $y ?>" <?= $filterYear == $y ? 'selected' : '' ?>><?= $y ?></option>
                         <?php endfor; ?>
                     </select>
