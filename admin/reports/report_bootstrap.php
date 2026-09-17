@@ -191,6 +191,11 @@ $sessionStr = ($month >= 7) ? ('July to Dec ' . $year) : ('Jan to June ' . $year
 $academicYearStr = $year . '-' . substr((string)($year + 1), -2);
 $deptName = !empty($faculty['department']) ? $faculty['department'] : 'School of Data Science & Forecasting';
 
+// Reuse saved report metadata when available; otherwise use the standard defaults.
+$submissionDate = $existingSnapshot['submission_date'] ?? date('Y-m-d');
+$attendanceRegPage = $existingSnapshot['attendance_register_page'] ?? 'Page 02 - S.No. - 19';
+$chequeNo = $existingSnapshot['cheque_no'] ?? null;
+
 // ─── UPSERT PERMANENT MONTHLY SNAPSHOT (Active faculty only) ─────────────────
 if ($archiveId === 0) {
     try {
