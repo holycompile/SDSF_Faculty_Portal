@@ -30,24 +30,19 @@ if (!$faculty) {
     exit;
 }
 
-// DELETE with transaction — cascade removes: faculty_course_assignments, lecture_entries, payment_records
-try {
-    $pdo->beginTransaction();
-    // Clean up payment records explicitly to ensure safety regardless of FK cascade config
-    $pdo->prepare("DELETE FROM payment_records WHERE faculty_id = ?")->execute([$id]);
-    $del = $pdo->prepare("DELETE FROM faculty_members WHERE id = ?");
-    $del->execute([$id]);
-    $pdo->commit();
+require_once ROOT . '/includes/archive_helper.php';
 
+// ARCHIVE & DELETE — safely backup all faculty data into archived_faculty_records before removing from active tables
+$adminUser = $_SESSION['admin_username'] ?? 'admin';
+$res = archiveFaculty($pdo, $id, $adminUser);
+
+if ($res['success']) {
     setFlash('success',
-        'Faculty "' . $faculty['name'] . '" (' . $faculty['faculty_enrollment_no'] . ') ' .
-        'and all their records (course assignments, lecture entries) have been permanently deleted.'
+        'Faculty "' . htmlspecialchars($faculty['name']) . '" (' . htmlspecialchars($faculty['faculty_enrollment_no']) . ') ' .
+        'and all their records (' . (int)$res['total_lec'] . ' lectures, ' . (float)$res['total_hrs'] . ' hrs, attendance sheets) have been safely backed up to <strong>Old Records</strong>. You can view or restore them anytime.'
     );
-} catch (PDOException $e) {
-    if ($pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-    setFlash('error', 'Failed to delete faculty member: ' . $e->getMessage());
+} else {
+    setFlash('error', 'Failed to archive and delete faculty member: ' . htmlspecialchars($res['message']));
 }
 
 header('Location: ' . BASE_URL . '/admin/faculty/list.php');

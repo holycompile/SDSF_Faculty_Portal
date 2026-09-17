@@ -481,17 +481,16 @@ $active_nav = 'faculty-list';
         <div style="width:64px;height:64px;border-radius:18px;background:#fef2f2;border:2px solid #fecaca;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </div>
-        <h2 style="font-size:19px;font-weight:800;color:#0f172a;text-align:center;margin:0 0 8px;">Delete Faculty Member?</h2>
-        <p style="font-size:13.5px;color:#64748b;text-align:center;margin:0 0 18px;line-height:1.6;">You are about to permanently delete:</p>
+        <h2 style="font-size:19px;font-weight:800;color:#0f172a;text-align:center;margin:0 0 8px;">Archive &amp; Remove Faculty?</h2>
+        <p style="font-size:13.5px;color:#64748b;text-align:center;margin:0 0 18px;line-height:1.6;">You are removing this faculty member from active directory:</p>
         <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:18px;text-align:center;">
             <div id="modal-name" style="font-size:16px;font-weight:800;color:#0f172a;"></div>
             <div id="modal-enroll" style="font-size:12px;font-family:monospace;font-weight:700;color:#4f46e5;background:#eef2ff;display:inline-block;padding:2px 10px;border-radius:6px;margin-top:6px;"></div>
         </div>
-        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:24px;display:flex;gap:10px;align-items:flex-start;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" style="flex-shrink:0;margin-top:1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            <span style="font-size:12.5px;color:#92400e;line-height:1.55;">
-                This will <strong>permanently delete</strong> all their course assignments, lecture entries, and payment records.
-                <strong>This action cannot be undone.</strong>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:24px;display:flex;gap:10px;align-items:flex-start;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" style="flex-shrink:0;margin-top:1px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            <span style="font-size:12.5px;color:#1e40af;line-height:1.55;">
+                <strong>Safe Backup Guaranteed:</strong> All profile info, assigned subjects, conducted lectures, student attendance sheets, and bills will be <strong>securely cloned and saved into Old Records</strong>. You can inspect or <strong>Restore</strong> them anytime.
             </span>
         </div>
         <div style="display:flex;gap:12px;">
@@ -506,7 +505,7 @@ $active_nav = 'faculty-list';
                     style="width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 2px 10px rgba(220,38,38,0.28);transition:all .18s;"
                     onmouseenter="this.style.boxShadow='0 4px 18px rgba(220,38,38,0.45)';"
                     onmouseleave="this.style.boxShadow='0 2px 10px rgba(220,38,38,0.28)';">
-                    Yes, Delete Permanently
+                    Archive &amp; Remove
                 </button>
             </form>
         </div>

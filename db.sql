@@ -200,6 +200,44 @@ CREATE TABLE IF NOT EXISTS student_attendance (
 );
 
 
+-- ── 10. ARCHIVED FACULTY RECORDS (Old Records / Backup) ───────
+CREATE TABLE IF NOT EXISTS archived_faculty_records (
+  id                    INT AUTO_INCREMENT PRIMARY KEY,
+  original_faculty_id   INT NOT NULL,
+  faculty_enrollment_no VARCHAR(20) NOT NULL,
+  name                  VARCHAR(150) NOT NULL,
+  email                 VARCHAR(150) NULL,
+  phone                 VARCHAR(20) NULL,
+  address               TEXT NULL,
+  qualification         VARCHAR(200) NULL,
+  department            VARCHAR(150) NULL,
+  pan_no                VARCHAR(20) NULL,
+  account_no            VARCHAR(30) NULL,
+  bank_name             VARCHAR(100) NULL,
+  ifsc_code             VARCHAR(20) NULL,
+  aadhaar_no            VARCHAR(20) NULL,
+  theory_rate           DECIMAL(8,2) NOT NULL DEFAULT 800.00,
+  practical_rate        DECIMAL(8,2) NOT NULL DEFAULT 400.00,
+  password_hash         VARCHAR(255) NULL,
+  is_password_changed   TINYINT DEFAULT 0,
+  faculty_data_json     LONGTEXT NOT NULL,
+  courses_data_json     LONGTEXT NULL,
+  lectures_data_json    LONGTEXT NULL,
+  attendance_data_json  LONGTEXT NULL,
+  reports_data_json     LONGTEXT NULL,
+  payments_data_json    LONGTEXT NULL,
+  total_lectures        INT DEFAULT 0,
+  total_hours           DECIMAL(8,1) DEFAULT 0.0,
+  total_amount          DECIMAL(10,2) DEFAULT 0.00,
+  archived_by           VARCHAR(100) DEFAULT 'admin',
+  archived_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  status                ENUM('archived', 'restored') DEFAULT 'archived',
+  restored_at           TIMESTAMP NULL,
+  INDEX idx_arch_enroll (faculty_enrollment_no),
+  INDEX idx_arch_status (status)
+);
+
+
 -- ── SEED DATA: Academic Programs & Batches ───────────────────
 INSERT INTO academic_programs (program_name, program_code, batch_year, total_semesters) VALUES
 ('M.Tech AI&DS',     'MTECH-AIDS', '2022-2027', 10),

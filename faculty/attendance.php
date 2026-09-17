@@ -327,6 +327,10 @@ $active_nav = 'attendance';
                             <span class="badge <?= $avgPct >= 75 ? 'badge-green' : ($avgPct >= 50 ? 'badge-yellow' : 'badge-red') ?>" style="font-size:12px;padding:5px 12px;">
                                 Avg: <?= $avgPct ?>%
                             </span>
+                            <a href="<?= BASE_URL ?>/admin/reports/student_attendance_pdf.php?course_id=<?= $ac['id'] ?>" target="_blank" class="btn btn-outline btn-sm" style="font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px;" title="Download complete attendance matrix for this subject as PDF">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Download PDF
+                            </a>
                             <a href="<?= BASE_URL ?>/faculty/lecture_entry.php?course_id=<?= $ac['id'] ?>" class="btn btn-primary btn-sm" style="font-weight:700;">
                                 + Mark Today's Attendance
                             </a>
@@ -558,10 +562,17 @@ $active_nav = 'attendance';
                                 <?php endif; ?>
                             </td>
                             <td style="text-align:right;">
-                                <button type="button" class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 10px;"
-                                        onclick="openAttendanceSheet(<?= $lec['id'] ?>)">
-                                    View / Edit Sheet
-                                </button>
+                                <div style="display:inline-flex;gap:6px;align-items:center;">
+                                    <?php if ($attTot > 0): ?>
+                                        <a href="<?= BASE_URL ?>/admin/reports/student_attendance_pdf.php?lecture_id=<?= $lec['id'] ?>" target="_blank" class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 9px;" title="Download this session's attendance sheet as PDF">
+                                            PDF
+                                        </a>
+                                    <?php endif; ?>
+                                    <button type="button" class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 10px;"
+                                            onclick="openAttendanceSheet(<?= $lec['id'] ?>)">
+                                        View / Edit
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -620,9 +631,15 @@ $active_nav = 'attendance';
                     </table>
                 </div>
 
-                <div style="padding:16px 24px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:10px;background:#fff;">
-                    <button type="button" class="btn btn-outline" onclick="closeAttModal()">Close</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                <div style="padding:16px 24px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;background:#fff;flex-wrap:wrap;gap:10px;">
+                    <a id="modalDownloadPdfBtn" href="#" target="_blank" class="btn btn-outline btn-sm" style="font-size:12.5px;display:inline-flex;align-items:center;gap:6px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Download PDF Sheet
+                    </a>
+                    <div style="display:flex;gap:10px;">
+                        <button type="button" class="btn btn-outline" onclick="closeAttModal()">Close</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -651,6 +668,8 @@ $active_nav = 'attendance';
         document.getElementById('modalLoading').style.display = 'block';
         document.getElementById('modalForm').style.display = 'none';
         document.getElementById('modalLectureId').value = lectureId;
+        const pdfBtn = document.getElementById('modalDownloadPdfBtn');
+        if (pdfBtn) pdfBtn.href = '<?= BASE_URL ?>/admin/reports/student_attendance_pdf.php?lecture_id=' + lectureId;
 
         fetch('<?= BASE_URL ?>/api/get_lecture_attendance.php?lecture_id=' + lectureId)
             .then(res => res.json())

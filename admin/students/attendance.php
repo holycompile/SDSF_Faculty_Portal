@@ -252,6 +252,10 @@ $active_nav = 'students-attendance';
                             <span class="badge <?= $avgPct >= 75 ? 'badge-green' : ($avgPct >= 50 ? 'badge-yellow' : 'badge-red') ?>" style="font-size:12px;padding:5px 12px;">
                                 Avg: <?= $avgPct ?>%
                             </span>
+                            <a href="<?= BASE_URL ?>/admin/reports/student_attendance_pdf.php?course_id=<?= $cc['id'] ?>" target="_blank" class="btn btn-outline btn-sm" style="font-size:12px;padding:5px 12px;font-weight:700;display:inline-flex;align-items:center;gap:6px;" title="Download complete attendance matrix for this subject as PDF">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Download PDF
+                            </a>
                             <a href="<?= BASE_URL ?>/admin/courses/list.php?program=<?= urlencode($cc['program_name'] ?? ($currentProgram['program_name'] ?? '')) ?>" class="btn btn-outline btn-sm" style="font-size:12px;padding:5px 12px;">
                                 View in Curriculum
                             </a>
@@ -518,9 +522,14 @@ $active_nav = 'students-attendance';
                             </td>
                             <td style="text-align:right;">
                                 <?php if ($tot > 0): ?>
-                                    <button type="button" class="btn btn-outline btn-sm" onclick="viewAttendance(<?= $l['id'] ?>)">
-                                        View Sheet &rarr;
-                                    </button>
+                                    <div style="display:inline-flex;gap:6px;align-items:center;">
+                                        <a href="<?= BASE_URL ?>/admin/reports/student_attendance_pdf.php?lecture_id=<?= $l['id'] ?>" target="_blank" class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 9px;" title="Download this session's attendance sheet as PDF">
+                                            PDF
+                                        </a>
+                                        <button type="button" class="btn btn-outline btn-sm" onclick="viewAttendance(<?= $l['id'] ?>)">
+                                            View Sheet &rarr;
+                                        </button>
+                                    </div>
                                 <?php else: ?>
                                     <span style="color:#cbd5e1;font-size:12px;">—</span>
                                 <?php endif; ?>
@@ -561,7 +570,11 @@ $active_nav = 'students-attendance';
             <!-- Student Rows Injected Here -->
         </div>
 
-        <div style="padding:14px 24px;border-top:1.5px solid #f1f5f9;text-align:right;background:#f8fafc;">
+        <div style="padding:14px 24px;border-top:1.5px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;background:#f8fafc;flex-wrap:wrap;gap:10px;">
+            <a id="adminModalPdfBtn" href="#" target="_blank" class="btn btn-outline btn-sm" style="display:inline-flex;align-items:center;gap:6px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download PDF Sheet
+            </a>
             <button type="button" class="btn btn-outline" onclick="closeAttModal()" style="padding:8px 18px;">Close Sheet</button>
         </div>
     </div>
@@ -589,6 +602,8 @@ function viewAttendance(lectureId) {
     const content = document.getElementById('modalContent');
     content.innerHTML = '<div style="padding:30px;text-align:center;color:#64748b;">Loading student attendance sheet...</div>';
     modal.style.display = 'flex';
+    const pdfBtn = document.getElementById('adminModalPdfBtn');
+    if (pdfBtn) pdfBtn.href = '<?= BASE_URL ?>/admin/reports/student_attendance_pdf.php?lecture_id=' + lectureId;
 
     fetch(`<?= BASE_URL ?>/api/get_lecture_attendance.php?lecture_id=${lectureId}`)
         .then(res => res.json())

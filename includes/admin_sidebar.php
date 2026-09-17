@@ -289,6 +289,10 @@ body.sidebar-open {
             <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
             Course-wise View
         </a>
+        <a href="<?= BASE_URL ?>/admin/faculty/archives.php" class="nav-link <?= $_active==='old-records'?'active':'' ?>">
+            <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+            Old Records (Backup)
+        </a>
 
         <div class="nav-section">Account & Security</div>
         <a href="<?= BASE_URL ?>/admin/change_password.php" class="nav-link <?= $_active==='change-password'?'active':'' ?>">

@@ -31,44 +31,71 @@ $month = (int)($_GET['month'] ?? 9);
 if ($year === 2026 && $month < 9) $month = 9;
 if ($month < 1 || $month > 12) $month = 9;
 
-// Fetch Faculty Record
-$fStmt = $pdo->prepare("SELECT * FROM faculty_members WHERE id = ?");
-$fStmt->execute([$facultyId]);
-$faculty = $fStmt->fetch();
-if (!$faculty) {
-    die("<div style='font-family:sans-serif;padding:30px;color:#c00;'><h3>Faculty Member Not Found</h3></div>");
-}
+$archiveId = (int)($_GET['archive_id'] ?? 0);
+$faculty = null;
+$existingSnapshot = null;
+$allLectures = [];
 
-// Check existing monthly snapshot
-$snapStmt = $pdo->prepare("SELECT * FROM monthly_report_submissions WHERE faculty_id = ? AND month = ? AND year = ?");
-$snapStmt->execute([$facultyId, $month, $year]);
-$existingSnapshot = $snapStmt->fetch();
-
-// Default or existing submission date
-$submissionDate = trim($_GET['submission_date'] ?? ($existingSnapshot['submission_date'] ?? date('Y-m-d')));
-if (strpos($submissionDate, '/') !== false) {
-    // Convert DD/MM/YYYY to YYYY-MM-DD
-    $dParts = explode('/', $submissionDate);
-    if (count($dParts) === 3) {
-        $submissionDate = $dParts[2] . '-' . str_pad($dParts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($dParts[0], 2, '0', STR_PAD_LEFT);
+if ($archiveId > 0) {
+    $archStmt = $pdo->prepare("SELECT * FROM archived_faculty_records WHERE id = ?");
+    $archStmt->execute([$archiveId]);
+    $arch = $archStmt->fetch(PDO::FETCH_ASSOC);
+    if ($arch) {
+        $faculty = json_decode($arch['faculty_data_json'] ?? '{}', true);
+        if (!$faculty) {
+            $faculty = [
+                'id' => $arch['original_faculty_id'],
+                'name' => $arch['name'],
+                'faculty_enrollment_no' => $arch['faculty_enrollment_no'],
+                'email' => $arch['email'],
+                'phone' => $arch['phone'],
+                'department' => $arch['department'],
+                'theory_rate' => $arch['theory_rate'],
+                'practical_rate' => $arch['practical_rate']
+            ];
+        }
+        $archLectures = json_decode($arch['lectures_data_json'] ?? '[]', true);
+        foreach ($archLectures as $al) {
+            if ((int)date('m', strtotime($al['lecture_date'])) === $month && (int)date('Y', strtotime($al['lecture_date'])) === $year) {
+                $al['c_id'] = $al['course_id'];
+                $allLectures[] = $al;
+            }
+        }
+        $archReports = json_decode($arch['reports_data_json'] ?? '[]', true);
+        foreach ($archReports as $ar) {
+            if ((int)($ar['month'] ?? 0) === $month && (int)($ar['year'] ?? 0) === $year) {
+                $existingSnapshot = $ar;
+                break;
+            }
+        }
     }
 }
-$displaySubmissionDate = date('d-m-Y', strtotime($submissionDate));
 
-// Page / S.No. of Attendance Register
-$attendanceRegPage = trim($_GET['page_no'] ?? ($existingSnapshot['attendance_register_page'] ?? 'Page 02 - S.No. - 19'));
-$chequeNo = trim($_GET['cheque_no'] ?? ($existingSnapshot['cheque_no'] ?? ''));
+if (!$faculty) {
+    // Fetch Faculty Record from active directory
+    $fStmt = $pdo->prepare("SELECT * FROM faculty_members WHERE id = ?");
+    $fStmt->execute([$facultyId]);
+    $faculty = $fStmt->fetch();
+    if (!$faculty) {
+        die("<div style='font-family:sans-serif;padding:30px;color:#c00;'><h3>Faculty Member Not Found</h3></div>");
+    }
 
-// Fetch all lectures for this month & year
-$lStmt = $pdo->prepare("
-    SELECT le.*, c.id as c_id, c.program, c.semester, c.subject_name, c.course_code, c.class_type
-    FROM lecture_entries le
-    JOIN courses c ON c.id = le.course_id
-    WHERE le.faculty_id = ? AND MONTH(le.lecture_date) = ? AND YEAR(le.lecture_date) = ?
-    ORDER BY le.lecture_date ASC, c.subject_name ASC
-");
-$lStmt->execute([$facultyId, $month, $year]);
-$allLectures = $lStmt->fetchAll();
+    // Check existing monthly snapshot
+    $snapStmt = $pdo->prepare("SELECT * FROM monthly_report_submissions WHERE faculty_id = ? AND month = ? AND year = ?");
+    $snapStmt->execute([$facultyId, $month, $year]);
+    $existingSnapshot = $snapStmt->fetch();
+
+    // Fetch all lectures for this month & year
+    $lStmt = $pdo->prepare("
+        SELECT le.*, c.id as c_id, c.program, c.semester, c.subject_name, c.course_code, c.class_type
+        FROM lecture_entries le
+        JOIN courses c ON c.id = le.course_id
+        WHERE le.faculty_id = ? AND MONTH(le.lecture_date) = ? AND YEAR(le.lecture_date) = ?
+        ORDER BY le.lecture_date ASC, c.subject_name ASC
+    ");
+    $lStmt->execute([$facultyId, $month, $year]);
+    $allLectures = $lStmt->fetchAll();
+}
 
 // Aggregations
 $totalTheoryHours = 0.0;
@@ -164,54 +191,56 @@ $sessionStr = ($month >= 7) ? ('July to Dec ' . $year) : ('Jan to June ' . $year
 $academicYearStr = $year . '-' . substr((string)($year + 1), -2);
 $deptName = !empty($faculty['department']) ? $faculty['department'] : 'School of Data Science & Forecasting';
 
-// ─── UPSERT PERMANENT MONTHLY SNAPSHOT ─────────────────────────────────────────
-try {
-    $upsertStmt = $pdo->prepare("
-        INSERT INTO monthly_report_submissions (
-            faculty_id, month, year, submission_date, attendance_register_page, cheque_no,
-            theory_hours, tutorial_hours, practical_hours, total_hours,
-            theory_rate, practical_rate, theory_amount, practical_amount, total_amount,
-            programs_covered, status
-        ) VALUES (
-            :faculty_id, :month, :year, :sub_date, :page_no, :cheque_no,
-            :theory_hours, :tutorial_hours, :practical_hours, :total_hours,
-            :theory_rate, :practical_rate, :theory_amount, :practical_amount, :total_amount,
-            :programs, 'submitted'
-        )
-        ON DUPLICATE KEY UPDATE
-            submission_date = VALUES(submission_date),
-            attendance_register_page = COALESCE(VALUES(attendance_register_page), attendance_register_page),
-            cheque_no = COALESCE(VALUES(cheque_no), cheque_no),
-            theory_hours = VALUES(theory_hours),
-            tutorial_hours = VALUES(tutorial_hours),
-            practical_hours = VALUES(practical_hours),
-            total_hours = VALUES(total_hours),
-            theory_amount = VALUES(theory_amount),
-            practical_amount = VALUES(practical_amount),
-            total_amount = VALUES(total_amount),
-            programs_covered = VALUES(programs_covered)
-    ");
-    $upsertStmt->execute([
-        ':faculty_id'        => $facultyId,
-        ':month'             => $month,
-        ':year'              => $year,
-        ':sub_date'          => $submissionDate,
-        ':page_no'           => $attendanceRegPage,
-        ':cheque_no'         => $chequeNo,
-        ':theory_hours'      => $totalTheoryHours,
-        ':tutorial_hours'    => $totalTutorialHours,
-        ':practical_hours'   => $totalPracticalHours,
-        ':total_hours'       => $grandTotalHours,
-        ':theory_rate'       => $theoryRate,
-        ':practical_rate'    => $practicalRate,
-        ':theory_amount'     => $theoryAmount,
-        ':practical_amount'  => $practicalAmount,
-        ':total_amount'      => $grandTotalAmount,
-        ':programs'          => $programsCoveredStr
-    ]);
-} catch (Exception $e) {
-    // Non-blocking fallback if snapshot table write experiences minor lock
-    error_log("Snapshot error: " . $e->getMessage());
+// ─── UPSERT PERMANENT MONTHLY SNAPSHOT (Active faculty only) ─────────────────
+if ($archiveId === 0) {
+    try {
+        $upsertStmt = $pdo->prepare("
+            INSERT INTO monthly_report_submissions (
+                faculty_id, month, year, submission_date, attendance_register_page, cheque_no,
+                theory_hours, tutorial_hours, practical_hours, total_hours,
+                theory_rate, practical_rate, theory_amount, practical_amount, total_amount,
+                programs_covered, status
+            ) VALUES (
+                :faculty_id, :month, :year, :sub_date, :page_no, :cheque_no,
+                :theory_hours, :tutorial_hours, :practical_hours, :total_hours,
+                :theory_rate, :practical_rate, :theory_amount, :practical_amount, :total_amount,
+                :programs, 'submitted'
+            )
+            ON DUPLICATE KEY UPDATE
+                submission_date = VALUES(submission_date),
+                attendance_register_page = COALESCE(VALUES(attendance_register_page), attendance_register_page),
+                cheque_no = COALESCE(VALUES(cheque_no), cheque_no),
+                theory_hours = VALUES(theory_hours),
+                tutorial_hours = VALUES(tutorial_hours),
+                practical_hours = VALUES(practical_hours),
+                total_hours = VALUES(total_hours),
+                theory_amount = VALUES(theory_amount),
+                practical_amount = VALUES(practical_amount),
+                total_amount = VALUES(total_amount),
+                programs_covered = VALUES(programs_covered)
+        ");
+        $upsertStmt->execute([
+            ':faculty_id'        => $facultyId,
+            ':month'             => $month,
+            ':year'              => $year,
+            ':sub_date'          => $submissionDate,
+            ':page_no'           => $attendanceRegPage,
+            ':cheque_no'         => $chequeNo,
+            ':theory_hours'      => $totalTheoryHours,
+            ':tutorial_hours'    => $totalTutorialHours,
+            ':practical_hours'   => $totalPracticalHours,
+            ':total_hours'       => $grandTotalHours,
+            ':theory_rate'       => $theoryRate,
+            ':practical_rate'    => $practicalRate,
+            ':theory_amount'     => $theoryAmount,
+            ':practical_amount'  => $practicalAmount,
+            ':total_amount'      => $grandTotalAmount,
+            ':programs'          => $programsCoveredStr
+        ]);
+    } catch (Exception $e) {
+        // Non-blocking fallback if snapshot table write experiences minor lock
+        error_log("Snapshot error: " . $e->getMessage());
+    }
 }
 
 // ─── HELPER: Render UVFIN Box ─────────────────────────────────────────────────
