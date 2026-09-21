@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 
     // Verify faculty owns the course
     try {
-        $ownChk = $pdo->prepare("SELECT id FROM courses c JOIN faculty_course_assignments fca ON fca.course_id = c.id WHERE c.id = ? AND fca.faculty_id = ? LIMIT 1");
+        $ownChk = $pdo->prepare("SELECT c.id FROM courses c JOIN faculty_course_assignments fca ON fca.course_id = c.id WHERE c.id = ? AND fca.faculty_id = ? LIMIT 1");
         $ownChk->execute([$delCourseId, $facultyId]);
         if (!$ownChk->fetchColumn()) {
             echo json_encode(['success' => false, 'message' => 'Permission denied.']); exit;
