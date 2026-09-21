@@ -818,9 +818,10 @@ $active_nav = 'attendance';
         btn.textContent = 'Deleting…';
 
         fetch('<?= BASE_URL ?>/api/delete_attendance_column.php', {
-            method  : 'POST',
-            headers : { 'Content-Type': 'application/json' },
-            body    : JSON.stringify({
+            method      : 'POST',
+            credentials : 'same-origin',
+            headers     : { 'Content-Type': 'application/json' },
+            body        : JSON.stringify({
                 course_id  : parseInt(_delColPending.courseId),
                 col_name   : _delColPending.colName,
                 table_name : _delColPending.tableName,
