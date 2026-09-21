@@ -379,9 +379,18 @@ $active_nav = 'attendance';
                                                 $label = (count($parts) >= 3) ? ($parts[2] . '/' . $parts[1]) : $dClean;
                                                 if ($isSession2) $label .= ' (S2)';
                                             ?>
-                                                <th style="width:80px;text-align:center;background:#f0f9ff;border-left:1px solid #e0f2fe;" title="Session Date: <?= htmlspecialchars($dClean) ?> (Column: <?= htmlspecialchars($col) ?>)">
+                                                <th style="width:80px;text-align:center;background:#f0f9ff;border-left:1px solid #e0f2fe;position:relative;" title="Session Date: <?= htmlspecialchars($dClean) ?> (Column: <?= htmlspecialchars($col) ?>)" class="att-date-th" data-col="<?= htmlspecialchars($col) ?>" data-table="<?= htmlspecialchars($tblName) ?>" data-course="<?= $ac['id'] ?>" data-label="<?= htmlspecialchars($label) ?>"
+                                                >
                                                     <div style="font-size:11px;font-weight:800;color:#0369a1;"><?= htmlspecialchars($label) ?></div>
                                                     <div style="font-size:9px;color:#0284c7;font-weight:700;">(0 or 1)</div>
+                                                    <button type="button"
+                                                        class="att-col-del-btn"
+                                                        title="Delete this attendance date permanently"
+                                                        onclick="confirmDeleteAttCol(this)"
+                                                        style="position:absolute;top:3px;right:3px;background:none;border:none;cursor:pointer;padding:2px;border-radius:4px;opacity:0;transition:opacity .15s;line-height:1;"
+                                                    >
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                                    </button>
                                                 </th>
                                             <?php endforeach; ?>
                                         <?php endif; ?>
@@ -583,6 +592,33 @@ $active_nav = 'attendance';
         <?php endif; // end view mode cards vs logs ?>
     </div>
 
+    <!-- Delete Attendance Column Confirmation Modal -->
+    <div id="delColModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);z-index:10000;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#fff;border-radius:16px;max-width:400px;width:95%;box-shadow:0 20px 50px rgba(0,0,0,0.25);animation:fadeUp .18s ease both;overflow:hidden;">
+            <div style="padding:20px 22px 14px;border-bottom:1px solid #fee2e2;background:#fff5f5;display:flex;align-items:center;gap:12px;">
+                <div style="width:36px;height:36px;border-radius:10px;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:800;color:#0f172a;">Delete Attendance Date</div>
+                    <div style="font-size:12px;color:#64748b;margin-top:1px;">This action is permanent and cannot be undone.</div>
+                </div>
+            </div>
+            <div style="padding:18px 22px;">
+                <p style="font-size:13.5px;color:#334155;margin:0 0 6px;">You are about to permanently delete all attendance data for:</p>
+                <div id="delColModalLabel" style="font-size:15px;font-weight:800;color:#dc2626;background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:8px 14px;text-align:center;margin-bottom:14px;"></div>
+                <p style="font-size:12px;color:#94a3b8;margin:0;">This will also delete the associated lecture entry and all student attendance records for that session.</p>
+            </div>
+            <div style="padding:14px 22px 18px;display:flex;justify-content:flex-end;gap:10px;">
+                <button type="button" onclick="closeDelColModal()" class="btn btn-outline" style="font-size:13px;">Cancel</button>
+                <button type="button" id="delColConfirmBtn" onclick="executeDeleteAttCol()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                    Delete Permanently
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Attendance Sheet Modal -->
     <div id="attModal" class="modal-overlay">
         <div class="modal-card-box" style="background:#fff;border-radius:20px;max-width:620px;width:95%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.22);animation:fadeUp .2s ease both;">
@@ -645,6 +681,9 @@ $active_nav = 'attendance';
         </div>
     </div>
 
+    <style>
+    .att-date-th:hover .att-col-del-btn { opacity: 1 !important; }
+    </style>
     <script>
     function filterCardStudents(input, tableId) {
         const q = input.value.toLowerCase().trim();
@@ -749,6 +788,89 @@ $active_nav = 'attendance';
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
     }
+
+    // ── Delete Attendance Column ──────────────────────────────────────────────
+    let _delColPending = null; // { thEl, colName, tableName, courseId, label }
+
+    function confirmDeleteAttCol(btnEl) {
+        const th = btnEl.closest('th');
+        _delColPending = {
+            thEl      : th,
+            colName   : th.dataset.col,
+            tableName : th.dataset.table,
+            courseId  : th.dataset.course,
+            label     : th.dataset.label,
+        };
+        document.getElementById('delColModalLabel').textContent = _delColPending.label;
+        const modal = document.getElementById('delColModal');
+        modal.style.display = 'flex';
+    }
+
+    function closeDelColModal() {
+        document.getElementById('delColModal').style.display = 'none';
+        _delColPending = null;
+    }
+
+    function executeDeleteAttCol() {
+        if (!_delColPending) return;
+        const btn = document.getElementById('delColConfirmBtn');
+        btn.disabled = true;
+        btn.textContent = 'Deleting…';
+
+        fetch('<?= BASE_URL ?>/api/delete_attendance_column.php', {
+            method  : 'POST',
+            headers : { 'Content-Type': 'application/json' },
+            body    : JSON.stringify({
+                course_id  : parseInt(_delColPending.courseId),
+                col_name   : _delColPending.colName,
+                table_name : _delColPending.tableName,
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Remove the entire <th> from the header
+                const th = _delColPending.thEl;
+                const colIdx = Array.from(th.parentElement.children).indexOf(th);
+                th.remove();
+
+                // Remove the matching <td> in every body row of the same table
+                const table = th.closest('table');
+                if (table && colIdx >= 0) {
+                    table.querySelectorAll('tbody tr').forEach(row => {
+                        const td = row.children[colIdx];
+                        if (td) td.remove();
+                    });
+                }
+
+                // Update the Sessions Marked badge in the card header
+                const card = th.closest('.card') || document.body;
+                const badges = card.querySelectorAll('.badge-green');
+                badges.forEach(b => {
+                    if (b.textContent.includes('Sessions Marked')) {
+                        const cur = parseInt(b.textContent) || 0;
+                        b.textContent = Math.max(0, cur - 1) + ' Sessions Marked';
+                    }
+                });
+
+                closeDelColModal();
+            } else {
+                alert('Error: ' + (data.message || 'Could not delete column.'));
+                btn.disabled = false;
+                btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Delete Permanently';
+            }
+        })
+        .catch(err => {
+            alert('Network error: ' + err.message);
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Delete Permanently';
+        });
+    }
+
+    // Close del modal on backdrop click
+    document.getElementById('delColModal').addEventListener('click', function(e) {
+        if (e.target === this) closeDelColModal();
+    });
     </script>
 </body>
 </html>
