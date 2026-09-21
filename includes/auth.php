@@ -8,8 +8,8 @@ if (!defined('BASE_URL')) {
         define('BASE_URL', '');
     }
 }
-define('THEORY_RATE',    800);
-define('PRACTICAL_RATE', 400);
+if (!defined('THEORY_RATE'))    define('THEORY_RATE',    800);
+if (!defined('PRACTICAL_RATE')) define('PRACTICAL_RATE', 400);
 
 function requireAdmin() {
     if (session_status() === PHP_SESSION_NONE) session_start();

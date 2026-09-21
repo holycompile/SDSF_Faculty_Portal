@@ -9,6 +9,75 @@ requireFaculty();
 $facultyId   = getFacultyId() ?? (int)($_SESSION['faculty_id'] ?? 0);
 $facultyName = $_SESSION['faculty_name'] ?? 'Faculty Member';
 
+// ── Handle DELETE ATTENDANCE COLUMN (AJAX JSON) ─────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_att_col') {
+    while (ob_get_level()) { ob_end_clean(); }
+    header('Content-Type: application/json');
+
+    $delCourseId  = (int)($_POST['course_id']  ?? 0);
+    $delColName   = trim($_POST['col_name']   ?? '');
+    $delTableName = trim($_POST['table_name'] ?? '');
+
+    // Validate inputs
+    if (!$delCourseId || $delColName === '' || $delTableName === '') {
+        echo json_encode(['success' => false, 'message' => 'Missing parameters.']); exit;
+    }
+    if (!preg_match('/^att_[a-z0-9_]+$/i', $delColName)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid column name.']); exit;
+    }
+    if (!preg_match('/^students_[a-z0-9_]+$/i', $delTableName)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid table name.']); exit;
+    }
+
+    // Verify faculty owns the course
+    try {
+        $ownChk = $pdo->prepare("SELECT id FROM courses c JOIN faculty_course_assignments fca ON fca.course_id = c.id WHERE c.id = ? AND fca.faculty_id = ? LIMIT 1");
+        $ownChk->execute([$delCourseId, $facultyId]);
+        if (!$ownChk->fetchColumn()) {
+            echo json_encode(['success' => false, 'message' => 'Permission denied.']); exit;
+        }
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => 'DB error: ' . $e->getMessage()]); exit;
+    }
+
+    // Verify column exists
+    try {
+        if (!$pdo->query("SHOW COLUMNS FROM `{$delTableName}` LIKE '{$delColName}'")->fetchColumn()) {
+            echo json_encode(['success' => false, 'message' => 'Column not found.']); exit;
+        }
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => 'Column check error: ' . $e->getMessage()]); exit;
+    }
+
+    // Decode date from column name: att_c{id}_YYYY_MM_DD[_s2]  or  att_YYYY_MM_DD
+    $stripped = preg_replace('/^att_c\d+_/', '', $delColName);
+    $stripped = preg_replace('/^att_/', '', $stripped);
+    $stripped = preg_replace('/_s\d+$/', '', $stripped);
+    $dp = explode('_', $stripped);
+    $delDate = (count($dp) === 3) ? "{$dp[0]}-{$dp[1]}-{$dp[2]}" : null;
+
+    try {
+        $delLecCount = 0;
+        if ($delDate) {
+            $lStmt = $pdo->prepare("SELECT id FROM lecture_entries WHERE course_id = ? AND lecture_date = ?");
+            $lStmt->execute([$delCourseId, $delDate]);
+            $lIds = $lStmt->fetchAll(PDO::FETCH_COLUMN);
+            if (!empty($lIds)) {
+                $ph = implode(',', array_fill(0, count($lIds), '?'));
+                $pdo->prepare("DELETE FROM student_attendance WHERE lecture_id IN ({$ph})")->execute($lIds);
+                $pdo->prepare("DELETE FROM lecture_entries WHERE id IN ({$ph})")->execute($lIds);
+                $delLecCount = count($lIds);
+            }
+        }
+        // DDL — implicit MySQL commit; run after all DML
+        $pdo->exec("ALTER TABLE `{$delTableName}` DROP COLUMN `{$delColName}`");
+        echo json_encode(['success' => true, 'message' => 'Deleted.', 'deleted_lectures' => $delLecCount]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => 'Delete error: ' . $e->getMessage()]);
+    }
+    exit;
+}
+
 // Handle attendance update POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_attendance') {
     $lectureId = (int)($_POST['lecture_id'] ?? 0);
@@ -49,6 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     header('Location: ' . BASE_URL . '/faculty/attendance.php');
     exit;
 }
+
 
 // Fetch assigned courses with full program details
 $cStmt = $pdo->prepare("
@@ -817,15 +887,18 @@ $active_nav = 'attendance';
         btn.disabled = true;
         btn.textContent = 'Deleting…';
 
-        fetch('<?= BASE_URL ?>/api/delete_attendance_column.php', {
+        const formData = new URLSearchParams({
+            action     : 'delete_att_col',
+            course_id  : parseInt(_delColPending.courseId),
+            col_name   : _delColPending.colName,
+            table_name : _delColPending.tableName,
+        });
+
+        fetch('<?= BASE_URL ?>/faculty/attendance.php', {
             method      : 'POST',
             credentials : 'same-origin',
-            headers     : { 'Content-Type': 'application/json' },
-            body        : JSON.stringify({
-                course_id  : parseInt(_delColPending.courseId),
-                col_name   : _delColPending.colName,
-                table_name : _delColPending.tableName,
-            })
+            headers     : { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body        : formData.toString(),
         })
         .then(r => r.json())
         .then(data => {
