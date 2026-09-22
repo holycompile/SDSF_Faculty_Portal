@@ -152,7 +152,7 @@ $totalCount  = count($lectures);
                 </button>
                 <?php
                 $repYear = $filterYear ?: max(2026, (int)date('Y'));
-                $repMonth = $filterMonth ?: (($repYear == 2026) ? max(9, (int)date('m')) : (int)date('m'));
+                $repMonth = $filterMonth ?: (($repYear == 2026) ? max(8, (int)date('m')) : (int)date('m'));
                 ?>
                 <div id="historyReportMenu" class="report-menu">
                     <a href="<?= BASE_URL ?>/admin/reports/annexure_iv.php?faculty_id=<?= $facultyId ?>&month=<?= $repMonth ?>&year=<?= $repYear ?>" target="_blank">

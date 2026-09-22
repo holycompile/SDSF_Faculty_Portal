@@ -27,9 +27,9 @@ if (!$isAdmin && !$isFaculty) {
 $year = (int)($_GET['year'] ?? 2026);
 if ($year < 2026 || $year > 2035) $year = 2026;
 
-$month = (int)($_GET['month'] ?? 9);
-if ($year === 2026 && $month < 9) $month = 9;
-if ($month < 1 || $month > 12) $month = 9;
+$month = (int)($_GET['month'] ?? (int)date('m'));
+if ($year === 2026 && $month < 8) $month = 8;
+if ($month < 1 || $month > 12) $month = 8;
 
 $archiveId = (int)($_GET['archive_id'] ?? 0);
 $faculty = null;
@@ -192,12 +192,14 @@ $academicYearStr = $year . '-' . substr((string)($year + 1), -2);
 $deptName = !empty($faculty['department']) ? $faculty['department'] : 'School of Data Science & Forecasting';
 
 // Reuse saved report metadata when available; otherwise use the standard defaults.
-$submissionDate = $existingSnapshot['submission_date'] ?? date('Y-m-d');
+$subDateInput = $_GET['submission_date'] ?? ($existingSnapshot['submission_date'] ?? date('Y-m-d'));
+$submissionDate = date('Y-m-d', strtotime($subDateInput) ?: time());
 $attendanceRegPage = $existingSnapshot['attendance_register_page'] ?? 'Page 02 - S.No. - 19';
 $chequeNo = $existingSnapshot['cheque_no'] ?? null;
+$displaySubmissionDate = ($grandTotalHours > 0 && !empty($submissionDate)) ? date('d/m/Y', strtotime($submissionDate)) : '';
 
 // ─── UPSERT PERMANENT MONTHLY SNAPSHOT (Active faculty only) ─────────────────
-if ($archiveId === 0) {
+if ($archiveId === 0 && $grandTotalHours > 0) {
     try {
         $upsertStmt = $pdo->prepare("
             INSERT INTO monthly_report_submissions (
@@ -300,7 +302,7 @@ function renderReportNavBar(string $activeKey, int $facultyId, int $month, int $
     }
 
     $monthOptions = '';
-    $startMonth = ($year === 2026) ? 9 : 1;
+    $startMonth = ($year === 2026) ? 8 : 1;
     for ($m = $startMonth; $m <= 12; $m++) {
         $sel = ($m === $month) ? 'selected' : '';
         $mName = date('F', mktime(0,0,0,$m,1));

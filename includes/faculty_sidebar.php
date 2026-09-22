@@ -299,7 +299,7 @@ body.sidebar-open {
         <div class="nav-section">Official Documents</div>
         <?php
         $_sideYear = max(2026, (int)date('Y'));
-        $_sideMonth = ($_sideYear == 2026) ? max(9, (int)date('m')) : (int)date('m');
+        $_sideMonth = ($_sideYear == 2026) ? max(8, (int)date('m')) : (int)date('m');
         $_sideFacId = (int)($_SESSION['faculty_id'] ?? 0);
         ?>
         <div class="nav-dropdown" id="annexureNavDropdown">

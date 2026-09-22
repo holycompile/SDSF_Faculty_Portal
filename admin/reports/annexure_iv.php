@@ -462,7 +462,7 @@ body {
             <div>
                 <div style="height:20px;"></div>
                 Verified by Coordinator (Name &amp; Signature)<br>
-                Date: <u><?= $displaySubmissionDate ?></u>
+                Date: <u><?= !empty($displaySubmissionDate) ? $displaySubmissionDate : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' ?></u>
             </div>
         </div>
     </div>

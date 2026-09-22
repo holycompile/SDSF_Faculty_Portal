@@ -57,7 +57,7 @@ $stats = $sStmt->fetch();
 $currentMonth = (int)date('m');
 $currentYear  = (int)date('Y');
 $annexureStartYear = max(2026, $currentYear);
-$annexureStartMonth = ($annexureStartYear == 2026) ? max(9, $currentMonth) : $currentMonth;
+$annexureStartMonth = ($annexureStartYear == 2026) ? max(8, $currentMonth) : $currentMonth;
 $mStmt = $pdo->prepare("
     SELECT COALESCE(SUM(hours), 0) as m_hours,
            COALESCE(SUM(amount), 0) as m_amount,
@@ -256,7 +256,7 @@ $active_nav = 'dashboard';
                         <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Month</label>
                         <select name="month" id="docMonth" class="form-select" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:160px;font-family:'Inter',sans-serif;outline:none;">
                             <?php 
-                            $startMonth = (max(2026, $currentYear) == 2026) ? 9 : 1;
+                            $startMonth = (max(2026, $currentYear) == 2026) ? 8 : 1;
                             $selectedMonth = max($startMonth, $currentMonth);
                             for ($m = $startMonth; $m <= 12; $m++): ?>
                                 <option value="<?= $m ?>" <?= $m == $selectedMonth ? 'selected' : '' ?>>
@@ -484,7 +484,7 @@ function updateDocMonths() {
     
     const year = parseInt(ySel.value, 10);
     const prevVal = parseInt(mSel.value, 10);
-    const startM = (year === 2026) ? 9 : 1;
+    const startM = (year === 2026) ? 8 : 1;
     
     const names = [
         "", "January", "February", "March", "April", "May", "June",

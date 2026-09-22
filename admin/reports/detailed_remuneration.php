@@ -276,7 +276,7 @@ body {
     <div class="meta-row" style="display:flex;justify-content:flex-start;gap:20px;">
         <div>Month: <span class="dotted-fill"><?= $monthShortStr ?></span></div>
         <div>Year: <span class="dotted-fill"><?= $year ?></span></div>
-        <div>Date of Submission: <span class="dotted-fill"><?= $displaySubmissionDate ?></span></div>
+        <div>Date of Submission: <span class="dotted-fill"><?= !empty($displaySubmissionDate) ? $displaySubmissionDate : '..................' ?></span></div>
     </div>
     <div class="meta-row">
         Program Covered: <span class="dotted-fill"><?= htmlspecialchars($programsCoveredStr) ?></span>
