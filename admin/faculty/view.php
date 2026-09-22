@@ -189,9 +189,9 @@ $active_nav = 'faculty-list';
                         <div style="font-size:12px;color:#64748b;"><?= (float)$totalHours ?> total hours</div>
                     </div>
                     <div style="background:#fff;border:1px solid #e2e8f0;padding:12px 20px;border-radius:12px;text-align:right;">
-                        <div style="font-size:11.5px;color:#94a3b8;font-weight:600;text-transform:uppercase;"><?= date('F Y') ?></div>
-                        <div style="font-size:20px;font-weight:800;color:#4f46e5;">&#8377;<?= number_format($monthAmount, 2) ?></div>
-                        <div style="font-size:12px;color:#64748b;"><?= (float)$monthHours ?> hrs this month</div>
+                        <div id="adminMonthLabel" style="font-size:11.5px;color:#94a3b8;font-weight:600;text-transform:uppercase;"><?= date('F Y', mktime(0,0,0,$currentMonth,1,$currentYear)) ?></div>
+                        <div style="font-size:20px;font-weight:800;color:#4f46e5;">&#8377;<span id="adminMonthAmount"><?= number_format($monthAmount, 2) ?></span></div>
+                        <div style="font-size:12px;color:#64748b;"><span id="adminMonthHours"><?= (float)$monthHours ?></span> hrs this month</div>
                     </div>
                 </div>
             </div>
@@ -211,7 +211,7 @@ $active_nav = 'faculty-list';
                     <input type="hidden" name="faculty_id" value="<?= $faculty['id'] ?>">
                     <div>
                         <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Month</label>
-                        <select name="month" class="form-select" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:160px;font-family:'Inter',sans-serif;outline:none;">
+                        <select name="month" id="adminBillingMonth" class="form-select" onchange="updateAdminMonthStats()" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:160px;font-family:'Inter',sans-serif;outline:none;">
                             <?php for ($m = 1; $m <= 12; $m++): ?>
                                 <option value="<?= $m ?>" <?= $m == $currentMonth ? 'selected' : '' ?>>
                                     <?= date('F', mktime(0,0,0,$m,1)) ?>
@@ -221,7 +221,7 @@ $active_nav = 'faculty-list';
                     </div>
                     <div>
                         <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Year</label>
-                        <select name="year" class="form-select" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:120px;font-family:'Inter',sans-serif;outline:none;">
+                        <select name="year" id="adminBillingYear" class="form-select" onchange="updateAdminMonthStats()" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:120px;font-family:'Inter',sans-serif;outline:none;">
                             <?php for ($y = 2024; $y <= 2028; $y++): ?>
                                 <option value="<?= $y ?>" <?= $y == $currentYear ? 'selected' : '' ?>><?= $y ?></option>
                             <?php endfor; ?>
@@ -577,6 +577,39 @@ window.addEventListener('click', function(e) {
         rm.classList.remove('show');
     }
 });
+
+// Live-update the hero stats card when billing month/year changes
+const FACULTY_ID_ADMIN = <?= (int)$faculty['id'] ?>;
+function updateAdminMonthStats() {
+    const month = parseInt(document.getElementById('adminBillingMonth')?.value || 0);
+    const year  = parseInt(document.getElementById('adminBillingYear')?.value || 0);
+    if (!month || !year) return;
+
+    const labelEl  = document.getElementById('adminMonthLabel');
+    const amountEl = document.getElementById('adminMonthAmount');
+    const hoursEl  = document.getElementById('adminMonthHours');
+    if (!labelEl || !amountEl || !hoursEl) return;
+
+    // Optimistic dim
+    [amountEl, hoursEl].forEach(el => el.closest ? null : null);
+    amountEl.style.opacity = '0.5';
+    hoursEl.style.opacity  = '0.5';
+
+    fetch(`<?= BASE_URL ?>/api/faculty_month_stats.php?faculty_id=${FACULTY_ID_ADMIN}&month=${month}&year=${year}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) return;
+            labelEl.textContent  = data.month_label.toUpperCase();
+            amountEl.textContent = parseFloat(data.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            hoursEl.textContent  = parseFloat(data.hours);
+            amountEl.style.opacity = '1';
+            hoursEl.style.opacity  = '1';
+        })
+        .catch(() => {
+            amountEl.style.opacity = '1';
+            hoursEl.style.opacity  = '1';
+        });
+}
 </script>
 </body>
 </html>

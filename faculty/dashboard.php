@@ -198,24 +198,24 @@ $active_nav = 'dashboard';
 
             <div class="card" style="padding:22px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                    <span style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;"><?= date('F Y') ?> Hours</span>
+                    <span id="fac-hours-label" style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;"><?= date('F Y') ?> Hours</span>
                     <div style="width:36px;height:36px;border-radius:10px;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     </div>
                 </div>
-                <div style="font-size:28px;font-weight:800;color:#2563eb;"><?= (float)$monthHours ?> hrs</div>
-                <div style="font-size:12.5px;color:#64748b;margin-top:2px;"><?= $monthStats['m_count'] ?> sessions this month</div>
+                <div id="fac-hours-val" style="font-size:28px;font-weight:800;color:#2563eb;"><?= (float)$monthHours ?> hrs</div>
+                <div id="fac-hours-sessions" style="font-size:12.5px;color:#64748b;margin-top:2px;"><?= $monthStats['m_count'] ?> sessions this month</div>
             </div>
 
             <div class="card" style="padding:22px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                    <span style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;"><?= date('F Y') ?> Remuneration</span>
+                    <span id="fac-amount-label" style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;"><?= date('F Y') ?> Remuneration</span>
                     <div style="width:36px;height:36px;border-radius:10px;background:#f0fdf4;color:#16a34a;display:flex;align-items:center;justify-content:center;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     </div>
                 </div>
-                <div style="font-size:28px;font-weight:800;color:#047857;">&#8377;<?= number_format($monthAmount, 2) ?></div>
-                <div style="font-size:12.5px;color:<?= $monthAmount > 30000 ? '#b45309' : '#64748b' ?>;margin-top:2px;">
+                <div id="fac-amount-val" style="font-size:28px;font-weight:800;color:#047857;">&#8377;<?= number_format($monthAmount, 2) ?></div>
+                <div id="fac-amount-note" style="font-size:12.5px;color:<?= $monthAmount > 30000 ? '#b45309' : '#64748b' ?>;margin-top:2px;">
                     <?= $monthAmount > 30000 ? 'Exceeds &#8377;30,000 ceiling' : 'Under monthly limit' ?>
                 </div>
             </div>
@@ -246,7 +246,7 @@ $active_nav = 'dashboard';
                     <input type="hidden" name="faculty_id" value="<?= $facultyId ?>">
                     <div>
                         <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Year</label>
-                        <select name="year" id="docYear" class="form-select" onchange="updateDocMonths()" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:120px;font-family:'Inter',sans-serif;outline:none;">
+                        <select name="year" id="docYear" class="form-select" onchange="updateDocMonths(); fetchFacDocStats();" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:120px;font-family:'Inter',sans-serif;outline:none;">
                             <?php for ($y = 2026; $y <= 2028; $y++): ?>
                                 <option value="<?= $y ?>" <?= $y == max(2026, $currentYear) ? 'selected' : '' ?>><?= $y ?></option>
                             <?php endfor; ?>
@@ -254,7 +254,7 @@ $active_nav = 'dashboard';
                     </div>
                     <div>
                         <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Month</label>
-                        <select name="month" id="docMonth" class="form-select" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:160px;font-family:'Inter',sans-serif;outline:none;">
+                        <select name="month" id="docMonth" class="form-select" onchange="fetchFacDocStats();" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:160px;font-family:'Inter',sans-serif;outline:none;">
                             <?php 
                             $startMonth = (max(2026, $currentYear) == 2026) ? 8 : 1;
                             $selectedMonth = max($startMonth, $currentMonth);
@@ -501,6 +501,51 @@ function updateDocMonths() {
         }
         mSel.appendChild(opt);
     }
+}
+
+const FAC_ID_SELF = <?= (int)$facultyId ?>;
+function fetchFacDocStats() {
+    const month = parseInt(document.getElementById('docMonth')?.value || 0);
+    const year  = parseInt(document.getElementById('docYear')?.value || 0);
+    if (!month || !year) return;
+
+    const hoursLabel   = document.getElementById('fac-hours-label');
+    const hoursVal     = document.getElementById('fac-hours-val');
+    const hoursSess    = document.getElementById('fac-hours-sessions');
+    const amountLabel  = document.getElementById('fac-amount-label');
+    const amountVal    = document.getElementById('fac-amount-val');
+    const amountNote   = document.getElementById('fac-amount-note');
+    if (!hoursVal || !amountVal) return;
+
+    hoursVal.style.opacity  = '0.4';
+    amountVal.style.opacity = '0.4';
+
+    fetch(`<?= BASE_URL ?>/api/faculty_month_stats.php?faculty_id=${FAC_ID_SELF}&month=${month}&year=${year}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) return;
+            const label = data.month_label.toUpperCase();
+            if (hoursLabel)  hoursLabel.textContent  = label + ' HOURS';
+            if (amountLabel) amountLabel.textContent = label + ' REMUNERATION';
+            hoursVal.textContent  = parseFloat(data.hours) + ' hrs';
+            if (hoursSess) hoursSess.textContent = data.sessions + ' sessions this month';
+            amountVal.innerHTML   = '&#8377;' + parseFloat(data.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (amountNote) {
+                if (parseFloat(data.amount) > 30000) {
+                    amountNote.textContent = 'Exceeds \u20B930,000 ceiling';
+                    amountNote.style.color = '#b45309';
+                } else {
+                    amountNote.textContent = 'Under monthly limit';
+                    amountNote.style.color = '#64748b';
+                }
+            }
+            hoursVal.style.opacity  = '1';
+            amountVal.style.opacity = '1';
+        })
+        .catch(() => {
+            hoursVal.style.opacity  = '1';
+            amountVal.style.opacity = '1';
+        });
 }
 </script>
 </body>
