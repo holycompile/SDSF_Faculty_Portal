@@ -371,7 +371,10 @@ body {
                 <tr>
                     <td class="text-center"><?= htmlspecialchars($c['program']) ?></td>
                     <td class="text-center"><?= htmlspecialchars($c['semester']) ?></td>
-                    <td class="text-left"><strong><?= htmlspecialchars($c['subject_name']) ?></strong></td>
+                    <?php 
+                        $typeTag = ($c['class_type'] === 'P') ? ' (Practical)' : ' (Theory)';
+                    ?>
+                    <td class="text-left"><strong><?= htmlspecialchars($c['subject_name']) ?><span style="font-weight:normal;color:#475569;"><?= $typeTag ?></span></strong></td>
                     <td class="text-center" style="font-size:8.5pt;"><?= htmlspecialchars($datesFormatted) ?></td>
                     <td class="text-center font-bold"><strong><?= (float)$c['total_hours'] ?></strong></td>
                     <td class="text-center"><?= (int)$c['rate'] ?></td>

@@ -32,7 +32,7 @@ $courses = $cStmt->fetchAll();
 
 // Get recent lectures
 $lStmt = $pdo->prepare("
-    SELECT le.*, c.subject_name, c.course_code, c.program, c.semester, c.class_type
+    SELECT le.*, c.subject_name, c.course_code, c.program, c.semester, c.class_type AS course_class_type, le.class_type
     FROM lecture_entries le
     JOIN courses c ON c.id = le.course_id
     WHERE le.faculty_id = ?
@@ -53,11 +53,25 @@ $sStmt = $pdo->prepare("
 $sStmt->execute([$facultyId]);
 $stats = $sStmt->fetch();
 
+// Month-wise earnings breakdown (All-time per month)
+$mwStmt = $pdo->prepare("
+    SELECT YEAR(lecture_date) as yr, MONTH(lecture_date) as mo,
+           COUNT(*) as session_count,
+           COALESCE(SUM(hours), 0) as total_hours,
+           COALESCE(SUM(CASE WHEN class_type = 'P' THEN hours ELSE 0 END), 0) as practical_hours,
+           COALESCE(SUM(CASE WHEN class_type != 'P' THEN hours ELSE 0 END), 0) as theory_hours,
+           COALESCE(SUM(amount), 0) as total_amount
+    FROM lecture_entries
+    WHERE faculty_id = ?
+    GROUP BY yr, mo
+    ORDER BY yr DESC, mo DESC
+");
+$mwStmt->execute([$facultyId]);
+$monthWiseEarnings = $mwStmt->fetchAll(PDO::FETCH_ASSOC);
+
 // Current month stats
 $currentMonth = (int)date('m');
 $currentYear  = (int)date('Y');
-$annexureStartYear = max(2026, $currentYear);
-$annexureStartMonth = ($annexureStartYear == 2026) ? max(8, $currentMonth) : $currentMonth;
 $mStmt = $pdo->prepare("
     SELECT COALESCE(SUM(hours), 0) as m_hours,
            COALESCE(SUM(amount), 0) as m_amount,
@@ -67,8 +81,21 @@ $mStmt = $pdo->prepare("
 ");
 $mStmt->execute([$facultyId, $currentMonth, $currentYear]);
 $monthStats = $mStmt->fetch();
+
+// If current month has 0 entries and there are past entries, default to latest active month
+$selectedMonth = $currentMonth;
+$selectedYear  = $currentYear;
+if ((int)$monthStats['m_count'] === 0 && !empty($monthWiseEarnings)) {
+    $selectedMonth = (int)$monthWiseEarnings[0]['mo'];
+    $selectedYear  = (int)$monthWiseEarnings[0]['yr'];
+    $mStmt->execute([$facultyId, $selectedMonth, $selectedYear]);
+    $monthStats = $mStmt->fetch();
+}
 $monthAmount = (float)$monthStats['m_amount'];
 $monthHours  = (float)$monthStats['m_hours'];
+$selectedMonthLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedYear));
+$annexureStartYear = max(2026, $selectedYear);
+$annexureStartMonth = ($annexureStartYear == 2026) ? max(8, $selectedMonth) : $selectedMonth;
 
 $flash = getFlash();
 $active_nav = 'dashboard';
@@ -198,7 +225,7 @@ $active_nav = 'dashboard';
 
             <div class="card" style="padding:22px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                    <span id="fac-hours-label" style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;"><?= date('F Y') ?> Hours</span>
+                    <span id="fac-hours-label" style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;"><?= htmlspecialchars($selectedMonthLabel) ?> Hours</span>
                     <div style="width:36px;height:36px;border-radius:10px;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     </div>
@@ -209,7 +236,7 @@ $active_nav = 'dashboard';
 
             <div class="card" style="padding:22px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                    <span id="fac-amount-label" style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;"><?= date('F Y') ?> Remuneration</span>
+                    <span id="fac-amount-label" style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;"><?= htmlspecialchars($selectedMonthLabel) ?> Remuneration</span>
                     <div style="width:36px;height:36px;border-radius:10px;background:#f0fdf4;color:#16a34a;display:flex;align-items:center;justify-content:center;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     </div>
@@ -228,7 +255,7 @@ $active_nav = 'dashboard';
                     </div>
                 </div>
                 <div style="font-size:28px;font-weight:800;color:#0f172a;">&#8377;<?= number_format((float)$stats['total_earnings'], 2) ?></div>
-                <div style="font-size:12.5px;color:#64748b;margin-top:2px;"><?= (float)$stats['total_hours'] ?> total hours conducted</div>
+                <div id="fac-alltime-sub" style="font-size:12.5px;color:#64748b;margin-top:2px;"><?= (float)$stats['total_hours'] ?> total hours conducted</div>
             </div>
         </div>
 
@@ -248,7 +275,7 @@ $active_nav = 'dashboard';
                         <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Year</label>
                         <select name="year" id="docYear" class="form-select" onchange="updateDocMonths(); fetchFacDocStats();" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:120px;font-family:'Inter',sans-serif;outline:none;">
                             <?php for ($y = 2026; $y <= 2028; $y++): ?>
-                                <option value="<?= $y ?>" <?= $y == max(2026, $currentYear) ? 'selected' : '' ?>><?= $y ?></option>
+                                <option value="<?= $y ?>" <?= $y == $selectedYear ? 'selected' : '' ?>><?= $y ?></option>
                             <?php endfor; ?>
                         </select>
                     </div>
@@ -256,8 +283,7 @@ $active_nav = 'dashboard';
                         <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Month</label>
                         <select name="month" id="docMonth" class="form-select" onchange="fetchFacDocStats();" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:160px;font-family:'Inter',sans-serif;outline:none;">
                             <?php 
-                            $startMonth = (max(2026, $currentYear) == 2026) ? 8 : 1;
-                            $selectedMonth = max($startMonth, $currentMonth);
+                            $startMonth = ($selectedYear == 2026) ? 8 : 1;
                             for ($m = $startMonth; $m <= 12; $m++): ?>
                                 <option value="<?= $m ?>" <?= $m == $selectedMonth ? 'selected' : '' ?>>
                                     <?= date('F', mktime(0,0,0,$m,1)) ?>
@@ -278,6 +304,86 @@ $active_nav = 'dashboard';
                     </div>
                 </form>
             </div>
+        </div>
+
+        <!-- Month-Wise Earnings & Hours Summary Table Card -->
+        <div class="card" style="margin-bottom:28px;">
+            <div class="card-head" style="background:#ffffff;">
+                <div>
+                    <h2 style="font-size:16px;font-weight:700;color:#0f172a;margin:0;">Month-Wise Earnings &amp; Attendance Summary</h2>
+                    <div style="font-size:12.5px;color:#64748b;margin-top:2px;">Auditable breakdown of your monthly teaching hours, theory/practical sessions, and honorarium earnings</div>
+                </div>
+                <span class="badge badge-green"><?= count($monthWiseEarnings) ?> Active Month<?= count($monthWiseEarnings) !== 1 ? 's' : '' ?></span>
+            </div>
+            <?php if (empty($monthWiseEarnings)): ?>
+                <div style="padding:36px;text-align:center;color:#94a3b8;">
+                    No lecture sessions recorded yet. Once logged, all monthly earnings will be itemized here.
+                </div>
+            <?php else: ?>
+                <div style="overflow-x:auto;">
+                    <table class="ft">
+                        <thead>
+                            <tr>
+                                <th>Billing Month</th>
+                                <th>Theory Hours</th>
+                                <th>Practical Hours</th>
+                                <th>Total Hours</th>
+                                <th>Sessions</th>
+                                <th>Gross Remuneration</th>
+                                <th>Monthly Ceiling</th>
+                                <th style="text-align:right;">Official DAVV Documents</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($monthWiseEarnings as $mwe): 
+                                $mName = date('F Y', mktime(0, 0, 0, $mwe['mo'], 1, $mwe['yr']));
+                                $isExceeded = (float)$mwe['total_amount'] > 30000;
+                            ?>
+                            <tr>
+                                <td style="font-weight:700;color:#0f172a;">
+                                    <?= $mName ?>
+                                </td>
+                                <td style="color:#2563eb;font-weight:600;">
+                                    <?= (float)$mwe['theory_hours'] ?> hrs
+                                </td>
+                                <td style="color:#b45309;font-weight:600;">
+                                    <?= (float)$mwe['practical_hours'] ?> hrs
+                                </td>
+                                <td style="font-weight:700;color:#0f172a;">
+                                    <?= (float)$mwe['total_hours'] ?> hrs
+                                </td>
+                                <td style="color:#64748b;">
+                                    <?= (int)$mwe['session_count'] ?> sessions
+                                </td>
+                                <td style="font-weight:800;color:#047857;font-size:15px;">
+                                    &#8377;<?= number_format((float)$mwe['total_amount'], 2) ?>
+                                </td>
+                                <td>
+                                    <?php if ($isExceeded): ?>
+                                        <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">Exceeds &#8377;30k Limit</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-green">Within Limit</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="text-align:right;">
+                                    <div style="display:inline-flex;gap:6px;justify-content:flex-end;">
+                                        <a href="<?= BASE_URL ?>/admin/reports/annexure_iv.php?faculty_id=<?= $facultyId ?>&month=<?= $mwe['mo'] ?>&year=<?= $mwe['yr'] ?>" target="_blank" class="btn btn-outline" style="padding:4px 10px;font-size:12px;" title="Annexure-IV Claim Bill">
+                                            📄 Annexure-IV
+                                        </a>
+                                        <a href="<?= BASE_URL ?>/admin/reports/visiting_faculty_attendance.php?faculty_id=<?= $facultyId ?>&month=<?= $mwe['mo'] ?>&year=<?= $mwe['yr'] ?>" target="_blank" class="btn btn-outline" style="padding:4px 10px;font-size:12px;" title="Teaching Attendance">
+                                            📊 Attendance
+                                        </a>
+                                        <a href="<?= BASE_URL ?>/admin/reports/detailed_remuneration.php?faculty_id=<?= $facultyId ?>&month=<?= $mwe['mo'] ?>&year=<?= $mwe['yr'] ?>" target="_blank" class="btn btn-outline" style="padding:4px 10px;font-size:12px;" title="Annexure IV-A Detailed">
+                                            📋 Detailed
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </div>
 
         <!-- Assigned Courses Card — Course Cards Grid -->
@@ -528,7 +634,13 @@ function fetchFacDocStats() {
             if (hoursLabel)  hoursLabel.textContent  = label + ' HOURS';
             if (amountLabel) amountLabel.textContent = label + ' REMUNERATION';
             hoursVal.textContent  = parseFloat(data.hours) + ' hrs';
-            if (hoursSess) hoursSess.textContent = data.sessions + ' sessions this month';
+            if (hoursSess) {
+                let detailStr = data.sessions + ' sessions this month';
+                if (data.theory_hours > 0 || data.practical_hours > 0) {
+                    detailStr += ` (${parseFloat(data.theory_hours)}h Theory &bull; ${parseFloat(data.practical_hours)}h Practical)`;
+                }
+                hoursSess.innerHTML = detailStr;
+            }
             amountVal.innerHTML   = '&#8377;' + parseFloat(data.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             if (amountNote) {
                 if (parseFloat(data.amount) > 30000) {

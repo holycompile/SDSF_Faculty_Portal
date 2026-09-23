@@ -34,7 +34,7 @@ if (!$faculty) die("Faculty not found.");
 
 // ─── Fetch Lectures ───────────────────────────────────────────────────────────
 $lStmt = $pdo->prepare("
-    SELECT le.*, c.id as c_id, c.program, c.semester, c.subject_name, c.course_code, c.class_type
+    SELECT le.*, c.id as c_id, c.program, c.semester, c.subject_name, c.course_code, c.class_type AS course_class_type, le.class_type
     FROM lecture_entries le
     JOIN courses c ON c.id = le.course_id
     WHERE le.faculty_id = ? AND MONTH(le.lecture_date) = ? AND YEAR(le.lecture_date) = ?
@@ -43,27 +43,29 @@ $lStmt = $pdo->prepare("
 $lStmt->execute([$facultyId, $month, $year]);
 $allLectures = $lStmt->fetchAll();
 
-// ─── Group Lectures by Course ─────────────────────────────────────────────────
+// ─── Group Lectures by Course & Class Type ────────────────────────────────────
 $groupedCourses = [];
 foreach ($allLectures as $lec) {
     $cid = $lec['c_id'];
-    if (!isset($groupedCourses[$cid])) {
-        $groupedCourses[$cid] = [
+    $cType = strtoupper(trim($lec['class_type'] ?? 'T'));
+    $groupKey = $cid . '_' . $cType;
+    if (!isset($groupedCourses[$groupKey])) {
+        $groupedCourses[$groupKey] = [
             'program'      => $lec['program'],
             'semester'     => $lec['semester'],
-            'subject_name' => $lec['subject_name'],
+            'subject_name' => $lec['subject_name'] . ($cType === 'P' ? ' (Practical)' : ' (Theory)'),
             'course_code'  => $lec['course_code'],
-            'class_type'   => $lec['class_type'],
+            'class_type'   => $cType,
             'rate'         => $lec['rate_per_hour'],
             'total_hours'  => 0,
             'total_amount' => 0,
             'dates'        => []
         ];
     }
-    $groupedCourses[$cid]['total_hours']  += (float)$lec['hours'];
-    $groupedCourses[$cid]['total_amount'] += (float)$lec['amount'];
+    $groupedCourses[$groupKey]['total_hours']  += (float)$lec['hours'];
+    $groupedCourses[$groupKey]['total_amount'] += (float)$lec['amount'];
     $dStr = date('d/m/Y', strtotime($lec['lecture_date'])) . ' (' . (float)$lec['hours'] . ' Hrs)';
-    $groupedCourses[$cid]['dates'][] = $dStr;
+    $groupedCourses[$groupKey]['dates'][] = $dStr;
 }
 
 // ─── Overall Totals ───────────────────────────────────────────────────────────

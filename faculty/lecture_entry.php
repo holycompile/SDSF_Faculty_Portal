@@ -66,11 +66,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->beginTransaction();
 
+            $sessionType = ($sessionType === 'P') ? 'P' : 'T';
             $ins = $pdo->prepare("
-                INSERT INTO lecture_entries (faculty_id, course_id, lecture_date, hours, rate_per_hour, amount)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO lecture_entries (faculty_id, course_id, lecture_date, hours, class_type, rate_per_hour, amount)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
-            $ins->execute([$facultyId, $courseId, $lectureDate, $hours, $rate, $amount]);
+            $ins->execute([$facultyId, $courseId, $lectureDate, $hours, $sessionType, $rate, $amount]);
             $lectureId = (int)$pdo->lastInsertId();
 
             // Record attendance for students submitted with this lecture

@@ -87,7 +87,7 @@ if (!$faculty) {
 
     // Fetch all lectures for this month & year
     $lStmt = $pdo->prepare("
-        SELECT le.*, c.id as c_id, c.program, c.semester, c.subject_name, c.course_code, c.class_type
+        SELECT le.*, c.id as c_id, c.program, c.semester, c.subject_name, c.course_code, c.class_type AS course_class_type, le.class_type
         FROM lecture_entries le
         JOIN courses c ON c.id = le.course_id
         WHERE le.faculty_id = ? AND MONTH(le.lecture_date) = ? AND YEAR(le.lecture_date) = ?
@@ -121,10 +121,12 @@ foreach ($allLectures as $lec) {
         $programsList[] = $lec['program'];
     }
     
-    // Group by Course for Annexure-IV
+    // Group by Course and Class Type for Annexure-IV
     $cid = $lec['c_id'];
-    if (!isset($groupedByCourse[$cid])) {
-        $groupedByCourse[$cid] = [
+    $groupKey = $cid . '_' . $cType;
+    if (!isset($groupedByCourse[$groupKey])) {
+        $groupedByCourse[$groupKey] = [
+            'course_id'    => $cid,
             'program'      => $lec['program'],
             'semester'     => $lec['semester'],
             'subject_name' => $lec['subject_name'],
@@ -136,9 +138,9 @@ foreach ($allLectures as $lec) {
             'dates'        => []
         ];
     }
-    $groupedByCourse[$cid]['total_hours']  += $hrs;
-    $groupedByCourse[$cid]['total_amount'] += (float)$lec['amount'];
-    $groupedByCourse[$cid]['dates'][] = date('d/m', strtotime($lec['lecture_date'])) . '(' . (float)$hrs . ')';
+    $groupedByCourse[$groupKey]['total_hours']  += $hrs;
+    $groupedByCourse[$groupKey]['total_amount'] += (float)$lec['amount'];
+    $groupedByCourse[$groupKey]['dates'][] = date('d/m', strtotime($lec['lecture_date'])) . '(' . (float)$hrs . ')';
 
     // Daily breakdown for Annexure IV-A and Attendance Matrix
     $dateKey = $lec['lecture_date'];

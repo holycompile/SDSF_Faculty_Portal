@@ -3,7 +3,7 @@
  * AJAX endpoint: get month stats for a faculty member
  * Returns JSON: { hours, amount, sessions, month_label }
  */
-define('ROOT', dirname(dirname(dirname(__FILE__))));
+define('ROOT', dirname(dirname(__FILE__)));
 require_once ROOT . '/includes/auth.php';
 require_once ROOT . '/includes/db.php';
 
@@ -39,12 +39,24 @@ if (!$facultyId || $month < 1 || $month > 12 || $year < 2020 || $year > 2035) {
 $stmt = $pdo->prepare("
     SELECT COALESCE(SUM(hours), 0) as m_hours,
            COALESCE(SUM(amount), 0) as m_amount,
-           COUNT(*) as m_count
+           COUNT(*) as m_count,
+           COALESCE(SUM(CASE WHEN class_type = 'P' THEN hours ELSE 0 END), 0) as m_practical_hours,
+           COALESCE(SUM(CASE WHEN class_type != 'P' THEN hours ELSE 0 END), 0) as m_theory_hours
     FROM lecture_entries
     WHERE faculty_id = ? AND MONTH(lecture_date) = ? AND YEAR(lecture_date) = ?
 ");
 $stmt->execute([$facultyId, $month, $year]);
 $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Overall all-time stats
+$allTimeStmt = $pdo->prepare("
+    SELECT COALESCE(SUM(hours), 0) as total_hours,
+           COALESCE(SUM(amount), 0) as total_amount
+    FROM lecture_entries
+    WHERE faculty_id = ?
+");
+$allTimeStmt->execute([$facultyId]);
+$allTime = $allTimeStmt->fetch(PDO::FETCH_ASSOC);
 
 $monthNames = [
     1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
@@ -53,8 +65,12 @@ $monthNames = [
 ];
 
 echo json_encode([
-    'hours'       => (float)$row['m_hours'],
-    'amount'      => (float)$row['m_amount'],
-    'sessions'    => (int)$row['m_count'],
-    'month_label' => ($monthNames[$month] ?? '') . ' ' . $year,
+    'hours'           => (float)$row['m_hours'],
+    'amount'          => (float)$row['m_amount'],
+    'sessions'        => (int)$row['m_count'],
+    'theory_hours'    => (float)$row['m_theory_hours'],
+    'practical_hours' => (float)$row['m_practical_hours'],
+    'all_time_hours'  => (float)($allTime['total_hours'] ?? 0),
+    'all_time_amount' => (float)($allTime['total_amount'] ?? 0),
+    'month_label'     => ($monthNames[$month] ?? '') . ' ' . $year,
 ]);

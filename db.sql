@@ -103,6 +103,7 @@ CREATE TABLE lecture_entries (
   course_id     INT NOT NULL,
   lecture_date  DATE NOT NULL,
   hours         DECIMAL(4,1) NOT NULL,
+  class_type    ENUM('T','P') NOT NULL DEFAULT 'T' COMMENT 'T=Theory, P=Practical',
   rate_per_hour DECIMAL(8,2) NOT NULL   COMMENT 'Calculated by PHP: 800 (T) or 400 (P)',
   amount        DECIMAL(10,2) NOT NULL  COMMENT 'Calculated by PHP: hours * rate_per_hour',
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -74,7 +74,7 @@ function archiveFaculty(PDO $pdo, int $facultyId, string $archivedBy = 'admin'):
 
     // 3. Fetch Lecture Entries
     $stmt = $pdo->prepare("
-        SELECT le.*, c.subject_name, c.course_code, c.program, c.semester, c.class_type
+        SELECT le.*, c.subject_name, c.course_code, c.program, c.semester, c.class_type AS course_class_type, le.class_type
         FROM lecture_entries le
         JOIN courses c ON c.id = le.course_id
         WHERE le.faculty_id = ?
@@ -357,11 +357,12 @@ function restoreFaculty(PDO $pdo, int $archiveId): array {
                 $chkLec->execute([$oldLecId]);
                 $canUseOld = !$chkLec->fetchColumn();
 
+                $lecClassType = !empty($lec['class_type']) ? $lec['class_type'] : 'T';
                 if ($canUseOld) {
                     $insLec = $pdo->prepare("
                         INSERT INTO lecture_entries (
-                            id, faculty_id, course_id, lecture_date, hours, rate_per_hour, amount, created_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            id, faculty_id, course_id, lecture_date, hours, class_type, rate_per_hour, amount, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
                     $insLec->execute([
                         $oldLecId,
@@ -369,6 +370,7 @@ function restoreFaculty(PDO $pdo, int $archiveId): array {
                         (int)$lec['course_id'],
                         $lec['lecture_date'],
                         $lec['hours'],
+                        $lecClassType,
                         $lec['rate_per_hour'],
                         $lec['amount'],
                         $lec['created_at'] ?? date('Y-m-d H:i:s')
@@ -377,14 +379,15 @@ function restoreFaculty(PDO $pdo, int $archiveId): array {
                 } else {
                     $insLec = $pdo->prepare("
                         INSERT INTO lecture_entries (
-                            faculty_id, course_id, lecture_date, hours, rate_per_hour, amount, created_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                            faculty_id, course_id, lecture_date, hours, class_type, rate_per_hour, amount, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     ");
                     $insLec->execute([
                         $newFacultyId,
                         (int)$lec['course_id'],
                         $lec['lecture_date'],
                         $lec['hours'],
+                        $lecClassType,
                         $lec['rate_per_hour'],
                         $lec['amount'],
                         $lec['created_at'] ?? date('Y-m-d H:i:s')

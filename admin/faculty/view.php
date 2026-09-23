@@ -51,7 +51,7 @@ $assignedCourses = $cStmt->fetchAll();
 
 // Lecture entries
 $lStmt = $pdo->prepare("
-    SELECT le.*, c.subject_name, c.course_code, c.program, c.semester, c.class_type
+    SELECT le.*, c.subject_name, c.course_code, c.program, c.semester, c.class_type AS course_class_type, le.class_type
     FROM lecture_entries le
     JOIN courses c ON c.id = le.course_id
     WHERE le.faculty_id = ?
@@ -64,6 +64,22 @@ $lectures = $lStmt->fetchAll();
 $totalHours = array_sum(array_column($lectures, 'hours'));
 $totalEarned = array_sum(array_column($lectures, 'amount'));
 
+// Month-wise earnings breakdown (All-time per month)
+$mwStmt = $pdo->prepare("
+    SELECT YEAR(lecture_date) as yr, MONTH(lecture_date) as mo,
+           COUNT(*) as session_count,
+           COALESCE(SUM(hours), 0) as total_hours,
+           COALESCE(SUM(CASE WHEN class_type = 'P' THEN hours ELSE 0 END), 0) as practical_hours,
+           COALESCE(SUM(CASE WHEN class_type != 'P' THEN hours ELSE 0 END), 0) as theory_hours,
+           COALESCE(SUM(amount), 0) as total_amount
+    FROM lecture_entries
+    WHERE faculty_id = ?
+    GROUP BY yr, mo
+    ORDER BY yr DESC, mo DESC
+");
+$mwStmt->execute([$id]);
+$monthWiseEarnings = $mwStmt->fetchAll(PDO::FETCH_ASSOC);
+
 // Current month metrics
 $currentMonth = (int)date('m');
 $currentYear  = (int)date('Y');
@@ -74,8 +90,19 @@ $mStmt = $pdo->prepare("
 ");
 $mStmt->execute([$id, $currentMonth, $currentYear]);
 $monthMetrics = $mStmt->fetch();
+
+// If current month has 0 entries and there are past entries, default to latest active month
+$selectedMonth = $currentMonth;
+$selectedYear  = $currentYear;
+if ((float)$monthMetrics['m_hours'] == 0 && !empty($monthWiseEarnings)) {
+    $selectedMonth = (int)$monthWiseEarnings[0]['mo'];
+    $selectedYear  = (int)$monthWiseEarnings[0]['yr'];
+    $mStmt->execute([$id, $selectedMonth, $selectedYear]);
+    $monthMetrics = $mStmt->fetch();
+}
 $monthHours   = (float)$monthMetrics['m_hours'];
 $monthAmount  = (float)$monthMetrics['m_amount'];
+$selectedMonthLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedYear));
 
 $flash = getFlash();
 $active_nav = 'faculty-list';
@@ -189,7 +216,7 @@ $active_nav = 'faculty-list';
                         <div style="font-size:12px;color:#64748b;"><?= (float)$totalHours ?> total hours</div>
                     </div>
                     <div style="background:#fff;border:1px solid #e2e8f0;padding:12px 20px;border-radius:12px;text-align:right;">
-                        <div id="adminMonthLabel" style="font-size:11.5px;color:#94a3b8;font-weight:600;text-transform:uppercase;"><?= date('F Y', mktime(0,0,0,$currentMonth,1,$currentYear)) ?></div>
+                        <div id="adminMonthLabel" style="font-size:11.5px;color:#94a3b8;font-weight:600;text-transform:uppercase;"><?= htmlspecialchars($selectedMonthLabel) ?></div>
                         <div style="font-size:20px;font-weight:800;color:#4f46e5;">&#8377;<span id="adminMonthAmount"><?= number_format($monthAmount, 2) ?></span></div>
                         <div style="font-size:12px;color:#64748b;"><span id="adminMonthHours"><?= (float)$monthHours ?></span> hrs this month</div>
                     </div>
@@ -213,7 +240,7 @@ $active_nav = 'faculty-list';
                         <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Month</label>
                         <select name="month" id="adminBillingMonth" class="form-select" onchange="updateAdminMonthStats()" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:160px;font-family:'Inter',sans-serif;outline:none;">
                             <?php for ($m = 1; $m <= 12; $m++): ?>
-                                <option value="<?= $m ?>" <?= $m == $currentMonth ? 'selected' : '' ?>>
+                                <option value="<?= $m ?>" <?= $m == $selectedMonth ? 'selected' : '' ?>>
                                     <?= date('F', mktime(0,0,0,$m,1)) ?>
                                 </option>
                             <?php endfor; ?>
@@ -223,7 +250,7 @@ $active_nav = 'faculty-list';
                         <label style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px;">Billing Year</label>
                         <select name="year" id="adminBillingYear" class="form-select" onchange="updateAdminMonthStats()" style="padding:9px 12px;background:#fff;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#0f172a;width:120px;font-family:'Inter',sans-serif;outline:none;">
                             <?php for ($y = 2024; $y <= 2028; $y++): ?>
-                                <option value="<?= $y ?>" <?= $y == $currentYear ? 'selected' : '' ?>><?= $y ?></option>
+                                <option value="<?= $y ?>" <?= $y == $selectedYear ? 'selected' : '' ?>><?= $y ?></option>
                             <?php endfor; ?>
                         </select>
                     </div>
@@ -240,6 +267,84 @@ $active_nav = 'faculty-list';
                     </div>
                 </form>
             </div>
+        </div>
+
+        <!-- Month-Wise Earnings & Hours Summary Table Card (Admin) -->
+        <div class="card fade-up" style="margin-bottom:24px;">
+            <div class="card-head">
+                <div>
+                    <div class="card-title">Month-Wise Earnings &amp; Attendance Summary</div>
+                    <div class="card-sub">Auditable record of monthly teaching hours, theory/practical breakdown, and remuneration claims</div>
+                </div>
+                <span class="c-badge"><?= count($monthWiseEarnings) ?> Active Month<?= count($monthWiseEarnings) !== 1 ? 's' : '' ?></span>
+            </div>
+            <?php if (empty($monthWiseEarnings)): ?>
+                <div style="padding:30px;text-align:center;color:#94a3b8;font-size:14px;">
+                    No lecture sessions recorded yet for this faculty member.
+                </div>
+            <?php else: ?>
+                <table class="dt">
+                    <thead>
+                        <tr>
+                            <th>Billing Month</th>
+                            <th>Theory Hours</th>
+                            <th>Practical Hours</th>
+                            <th>Total Hours</th>
+                            <th>Sessions</th>
+                            <th>Gross Remuneration</th>
+                            <th>Monthly Status</th>
+                            <th style="text-align:right;">Official DAVV Documents</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($monthWiseEarnings as $mwe): 
+                            $mName = date('F Y', mktime(0, 0, 0, $mwe['mo'], 1, $mwe['yr']));
+                            $isExceeded = (float)$mwe['total_amount'] > 30000;
+                        ?>
+                        <tr>
+                            <td style="font-weight:700;color:#0f172a;">
+                                <?= $mName ?>
+                            </td>
+                            <td style="color:#2563eb;font-weight:600;">
+                                <?= (float)$mwe['theory_hours'] ?> hrs
+                            </td>
+                            <td style="color:#b45309;font-weight:600;">
+                                <?= (float)$mwe['practical_hours'] ?> hrs
+                            </td>
+                            <td style="font-weight:700;color:#0f172a;">
+                                <?= (float)$mwe['total_hours'] ?> hrs
+                            </td>
+                            <td style="color:#64748b;">
+                                <?= (int)$mwe['session_count'] ?> sessions
+                            </td>
+                            <td style="font-weight:800;color:#047857;font-size:15px;">
+                                &#8377;<?= number_format((float)$mwe['total_amount'], 2) ?>
+                            </td>
+                            <td>
+                                <?php if ($isExceeded): ?>
+                                    <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">Exceeds &#8377;30k Limit</span>
+                                <?php else: ?>
+                                    <span class="badge badge-green">Within Limit</span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="text-align:right;">
+                                <div style="display:inline-flex;gap:6px;justify-content:flex-end;">
+                                    <a href="<?= BASE_URL ?>/admin/reports/annexure_iv.php?faculty_id=<?= $faculty['id'] ?>&month=<?= $mwe['mo'] ?>&year=<?= $mwe['yr'] ?>" target="_blank" class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:12px;" title="Annexure-IV Claim Bill">
+                                        📄 Annexure-IV
+                                    </a>
+                                    <a href="<?= BASE_URL ?>/admin/reports/visiting_faculty_attendance.php?faculty_id=<?= $faculty['id'] ?>&month=<?= $mwe['mo'] ?>&year=<?= $mwe['yr'] ?>" target="_blank" class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:12px;" title="Teaching Attendance">
+                                        📊 Attendance
+                                    </a>
+                                    <a href="<?= BASE_URL ?>/admin/reports/detailed_remuneration.php?faculty_id=<?= $faculty['id'] ?>&month=<?= $mwe['mo'] ?>&year=<?= $mwe['yr'] ?>" target="_blank" class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:12px;" title="Annexure IV-A Detailed">
+                                        📋 Detailed
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
