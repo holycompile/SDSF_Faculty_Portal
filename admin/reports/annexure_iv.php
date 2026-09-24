@@ -282,19 +282,19 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    height: 130px;
+    min-height: 150px;
     font-size: 10pt;
     text-align: center;
 }
 .sig-name {
-    margin-top: 25px;
+    margin-top: 10px;
     font-weight: 600;
 }
 .final-footer-line {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    margin-top: 12px;
+    margin-top: 35px;
     font-size: 10pt;
     font-weight: bold;
 }
@@ -459,13 +459,12 @@ body {
 
         <div class="sigs-right">
             <div class="sig-name">
-                <div style="height:25px;"></div>
+                <div style="height:35px;"></div>
                 Name &amp; Signature of Visiting Faculty
             </div>
-            <div>
-                <div style="height:20px;"></div>
-                Verified by Coordinator (Name &amp; Signature)<br>
-                Date: <u><?= !empty($displaySubmissionDate) ? $displaySubmissionDate : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' ?></u>
+            <div style="font-weight:600;">
+                <div style="height:35px;"></div>
+                Verified by Coordinator (Name &amp; Signature)
             </div>
         </div>
     </div>
@@ -474,7 +473,7 @@ body {
     <div class="final-footer-line">
         <div>Received Payments of Rs. <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u></div>
         <div style="text-align:right;">
-            <div style="height:20px;"></div>
+            <div style="height:30px;"></div>
             Signature Director/Head (Name &amp; Seal)
         </div>
     </div>
