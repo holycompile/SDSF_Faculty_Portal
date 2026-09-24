@@ -7,7 +7,8 @@ if (file_exists(__DIR__ . '/mail_config.local.php')) {
 }
 
 if (!defined('BREVO_API_KEY')) {
-    define('BREVO_API_KEY', getenv('BREVO_API_KEY') ?: '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');
+    // Real key is set via mail_config.local.php (gitignored) or BREVO_API_KEY environment variable
+    define('BREVO_API_KEY', getenv('BREVO_API_KEY') ?: '');
 }
 if (!defined('BREVO_SENDER_EMAIL')) {
     define('BREVO_SENDER_EMAIL', getenv('BREVO_SENDER_EMAIL') ?: 'joyobratadas.85912@gmail.com');
