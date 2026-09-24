@@ -286,12 +286,11 @@ body {
     font-weight: bold;
 }
 .sigs-right {
-    transform: translateY(80px);
+    transform: translateY(45px);
     width: 48%;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    min-height: 155px;
+    gap:43px;
 }
 .sig-item {
     text-align: center;
@@ -476,17 +475,14 @@ body {
         <div class="sigs-right">
             <div class="sig-item">
                 <div class="sig-space"></div>
-                <div class="sig-line"></div>
                 <div class="sig-label">Name &amp; Signature of Visiting Faculty</div>
             </div>
             <div class="sig-item">
                 <div class="sig-space"></div>
-                <div class="sig-line"></div>
                 <div class="sig-label">Verified by Coordinator (Name &amp; Signature)</div>
             </div>
             <div class="sig-item">
                 <div class="sig-space"></div>
-                <div class="sig-line"></div>
                 <div class="sig-label">Signature Director/Head (Name &amp; Seal)</div>
             </div>
         </div>
