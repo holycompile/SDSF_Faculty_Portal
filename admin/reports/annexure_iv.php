@@ -277,26 +277,25 @@ body {
     text-align: left;
     padding-left: 4px;
 }
-.sigs-right {
+.received-box {
     width: 48%;
     display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 150px;
+    align-items: flex-end;
+    padding-bottom: 6px;
     font-size: 10pt;
-    text-align: center;
+    font-weight: bold;
 }
-.sig-name {
-    margin-top: 10px;
-    font-weight: 600;
-}
-.final-footer-line {
+.sigs-row {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    margin-top: 35px;
+    margin-top: 30px;
     font-size: 10pt;
     font-weight: bold;
+}
+.sig-col {
+    width: 220px;
+    text-align: center;
 }
 </style>
 </head>
@@ -457,23 +456,23 @@ body {
             </div>
         </div>
 
-        <div class="sigs-right">
-            <div class="sig-name">
-                <div style="height:35px;"></div>
-                Name &amp; Signature of Visiting Faculty
-            </div>
-            <div style="font-weight:600;">
-                <div style="height:35px;"></div>
-                Verified by Coordinator (Name &amp; Signature)
-            </div>
+        <div class="received-box">
+            <div>Received Payments of Rs. <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u></div>
         </div>
     </div>
 
-    <!-- FINAL FOOTER LINE -->
-    <div class="final-footer-line">
-        <div>Received Payments of Rs. <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u></div>
-        <div style="text-align:right;">
-            <div style="height:30px;"></div>
+    <!-- SIGNATURES (INLINE & ALIGNED) -->
+    <div class="sigs-row">
+        <div class="sig-col">
+            <div style="height:35px;"></div>
+            Name &amp; Signature of Visiting Faculty
+        </div>
+        <div class="sig-col">
+            <div style="height:35px;"></div>
+            Verified by Coordinator (Name &amp; Signature)
+        </div>
+        <div class="sig-col">
+            <div style="height:35px;"></div>
             Signature Director/Head (Name &amp; Seal)
         </div>
     </div>
