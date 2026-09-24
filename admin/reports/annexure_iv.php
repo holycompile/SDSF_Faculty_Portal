@@ -286,6 +286,7 @@ body {
     font-weight: bold;
 }
 .sigs-right {
+    transform: translateY(80px);
     width: 48%;
     display: flex;
     flex-direction: column;
@@ -471,6 +472,7 @@ body {
             </div>
         </div>
 
+        
         <div class="sigs-right">
             <div class="sig-item">
                 <div class="sig-space"></div>
