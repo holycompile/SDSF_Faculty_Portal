@@ -1,5 +1,10 @@
 <?php
+// Load local credentials first (gitignored, contains real API key)
+if (!defined('BREVO_API_KEY') && file_exists(__DIR__ . '/mail_config.local.php')) {
+    require_once __DIR__ . '/mail_config.local.php';
+}
 require_once __DIR__ . '/mail_config.php';
+
 
 /**
  * Send an email via Brevo REST API using native PHP stream context
