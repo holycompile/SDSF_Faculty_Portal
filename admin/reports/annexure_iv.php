@@ -254,8 +254,11 @@ body {
     margin-top: 8px;
     gap: 15px;
 }
-.bank-box {
+.bottom-left {
     width: 48%;
+}
+.bank-box {
+    width: 100%;
     border: 1px solid #000;
     padding: 6px 8px;
     font-size: 9pt;
@@ -277,25 +280,32 @@ body {
     text-align: left;
     padding-left: 4px;
 }
-.received-box {
+.received-payment-line {
+    margin-top: 14px;
+    font-size: 10pt;
+    font-weight: bold;
+}
+.sigs-right {
     width: 48%;
     display: flex;
-    align-items: flex-end;
-    padding-bottom: 6px;
-    font-size: 10pt;
-    font-weight: bold;
-}
-.sigs-row {
-    display: flex;
+    flex-direction: column;
     justify-content: space-between;
-    align-items: flex-end;
-    margin-top: 30px;
-    font-size: 10pt;
-    font-weight: bold;
+    min-height: 155px;
 }
-.sig-col {
-    width: 220px;
+.sig-item {
     text-align: center;
+}
+.sig-space {
+    height: 24px;
+}
+.sig-line {
+    border-top: 1px solid #000;
+    width: 100%;
+    margin-bottom: 3px;
+}
+.sig-label {
+    font-size: 9.5pt;
+    font-weight: bold;
 }
 </style>
 </head>
@@ -432,48 +442,51 @@ body {
 
     <!-- BANK DETAILS & SIGNATURES -->
     <div class="bottom-grid">
-        <div class="bank-box">
-            <div class="bank-box-line">
-                <span class="label">Pan Card No.:</span>
-                <span class="val"><?= htmlspecialchars($faculty['pan_no'] ?? '') ?></span>
+        <div class="bottom-left">
+            <div class="bank-box">
+                <div class="bank-box-line">
+                    <span class="label">Pan Card No.:</span>
+                    <span class="val"><?= htmlspecialchars($faculty['pan_no'] ?? '') ?></span>
+                </div>
+                <div class="bank-box-line">
+                    <span class="label">A/c No.:</span>
+                    <span class="val"><?= htmlspecialchars($faculty['account_no'] ?? '') ?></span>
+                </div>
+                <div class="bank-box-line">
+                    <span class="label">Bank Name:</span>
+                    <span class="val"><?= htmlspecialchars($faculty['bank_name'] ?? 'State Bank of India') ?></span>
+                </div>
+                <div style="font-size:8pt;font-style:italic;margin:1px 0 2px 0;color:#333;">(State bank of India Compulsory)</div>
+                <div class="bank-box-line">
+                    <span class="label">IFSC Code:</span>
+                    <span class="val"><?= htmlspecialchars($faculty['ifsc_code'] ?? '') ?></span>
+                </div>
+                <div class="bank-box-line">
+                    <span class="label">Aadhaar No.:</span>
+                    <span class="val"><?= htmlspecialchars($faculty['aadhaar_no'] ?? '') ?></span>
+                </div>
             </div>
-            <div class="bank-box-line">
-                <span class="label">A/c No.:</span>
-                <span class="val"><?= htmlspecialchars($faculty['account_no'] ?? '') ?></span>
-            </div>
-            <div class="bank-box-line">
-                <span class="label">Bank Name:</span>
-                <span class="val"><?= htmlspecialchars($faculty['bank_name'] ?? 'State Bank of India') ?></span>
-            </div>
-            <div style="font-size:8pt;font-style:italic;margin:1px 0 2px 0;color:#333;">(State bank of India Compulsory)</div>
-            <div class="bank-box-line">
-                <span class="label">IFSC Code:</span>
-                <span class="val"><?= htmlspecialchars($faculty['ifsc_code'] ?? '') ?></span>
-            </div>
-            <div class="bank-box-line">
-                <span class="label">Aadhaar No.:</span>
-                <span class="val"><?= htmlspecialchars($faculty['aadhaar_no'] ?? '') ?></span>
+            <div class="received-payment-line">
+                Received Payments of Rs. <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>
             </div>
         </div>
 
-        <div class="received-box">
-            <div>Received Payments of Rs. <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u></div>
-        </div>
-    </div>
-
-    <!-- SIGNATURES (INLINE & ALIGNED) -->
-    <div class="sigs-row">
-        <div class="sig-col">
-            <div style="height:35px;"></div>
-            Name &amp; Signature of Visiting Faculty
-        </div>
-        <div class="sig-col">
-            <div style="height:35px;"></div>
-            Verified by Coordinator (Name &amp; Signature)
-        </div>
-        <div class="sig-col">
-            <div style="height:35px;"></div>
-            Signature Director/Head (Name &amp; Seal)
+        <div class="sigs-right">
+            <div class="sig-item">
+                <div class="sig-space"></div>
+                <div class="sig-line"></div>
+                <div class="sig-label">Name &amp; Signature of Visiting Faculty</div>
+            </div>
+            <div class="sig-item">
+                <div class="sig-space"></div>
+                <div class="sig-line"></div>
+                <div class="sig-label">Verified by Coordinator (Name &amp; Signature)</div>
+            </div>
+            <div class="sig-item">
+                <div class="sig-space"></div>
+                <div class="sig-line"></div>
+                <div class="sig-label">Signature Director/Head (Name &amp; Seal)</div>
+            </div>
         </div>
     </div>
 </div>
