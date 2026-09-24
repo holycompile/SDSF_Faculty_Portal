@@ -412,7 +412,7 @@ $active_nav = 'dashboard';
                 <div style="padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
                     <?php foreach ($courses as $c):
                         $isTheory = ($c['class_type'] === 'T');
-                        $rate     = $isTheory ? 800 : 400;
+                        $rate     = $isTheory ? (float)($faculty['theory_rate'] ?? 800) : (float)($faculty['practical_rate'] ?? 400);
                         $typeLabel= $isTheory ? 'Theory' : 'Practical';
                         $typeColor= $isTheory ? '#2563eb' : '#b45309';
                         $typeBg   = $isTheory ? '#eff6ff' : '#fffbeb';
@@ -510,7 +510,7 @@ $active_nav = 'dashboard';
                                 <?php endif; ?>
                             </td>
                             <td style="font-weight:700;color:#047857;">
-                                &#8377;<?= $c['class_type'] === 'T' ? 800 : 400 ?> / hr
+                                &#8377;<?= number_format($c['class_type'] === 'T' ? (float)($faculty['theory_rate'] ?? 800) : (float)($faculty['practical_rate'] ?? 400)) ?> / hr
                             </td>
                             <td style="text-align:right;">
                                 <a href="<?= BASE_URL ?>/faculty/lecture_entry.php?course_id=<?= $c['id'] ?>" class="btn-teal" style="padding:6px 14px;font-size:12.5px;">
