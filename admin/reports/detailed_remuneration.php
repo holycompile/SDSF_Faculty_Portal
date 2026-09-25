@@ -235,12 +235,13 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    padding-top: 20px;
+    padding-top:10px;
     font-size: 10pt;
 }
 .sig-block {
     text-align: center;
     min-width: 220px;
+    padding-top: -10px;
 }
 </style>
 </head>
