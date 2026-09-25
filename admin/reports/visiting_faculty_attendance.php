@@ -258,8 +258,8 @@ body {
 
 /* ─── SIGNATURES BLOCK ───────────────────────────────────────────────────── */
 .sig-container {
-    margin-top: auto;
-    padding-top: 25px;
+    margin-top: 100px;
+    padding-top: 0;
     width: 100%;
 }
 .sig-row-top {
@@ -274,7 +274,7 @@ body {
     text-align: right;
     font-size: 10pt;
     font-weight: 600;
-    margin-top: 30px;
+    margin-top: 90px;
     padding-right: 25px;
 }
 </style>
