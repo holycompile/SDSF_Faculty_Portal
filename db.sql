@@ -184,7 +184,28 @@ CREATE TABLE IF NOT EXISTS students (
   INDEX idx_prog_sem (program_id, current_semester)
 );
 
--- ── 9. STUDENT ATTENDANCE ───────────────────────────────────
+-- ── 9. STUDENT MARKSHEETS ───────────────────────────────────
+CREATE TABLE IF NOT EXISTS student_marksheets (
+  id               INT AUTO_INCREMENT PRIMARY KEY,
+  teacher_id       INT NOT NULL,
+  course_id        INT NOT NULL,
+  student_id       INT NOT NULL,
+  class_test_1     DECIMAL(5,2) NULL,
+  class_test_2     DECIMAL(5,2) NULL,
+  class_test_3     DECIMAL(5,2) NULL,
+  best_of_2        DECIMAL(5,2) NULL,
+  final_sem_marks  DECIMAL(5,2) NULL,
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_teacher_course_student (teacher_id, course_id, student_id),
+  INDEX idx_teacher_course (teacher_id, course_id),
+  INDEX idx_course_student (course_id, student_id),
+  FOREIGN KEY (teacher_id) REFERENCES faculty_members(id) ON DELETE CASCADE,
+  FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+);
+
+-- ── 9B. STUDENT ATTENDANCE ──────────────────────────────────
 CREATE TABLE IF NOT EXISTS student_attendance (
   id              INT AUTO_INCREMENT PRIMARY KEY,
   lecture_id      INT NOT NULL,
