@@ -407,6 +407,14 @@ body {
                     <td>&nbsp;</td>
                 </tr>
             <?php endfor; ?>
+
+            <!-- TOTAL ROW INSIDE TABLE -->
+            <tr style="font-weight: bold; border-top: 2px solid #000;">
+                <td colspan="4" class="text-right" style="font-weight: bold; font-size: 10pt; padding-right: 8px;">Total</td>
+                <td class="text-center font-bold" style="font-weight: bold;"><?= (float)$grandTotalHours ?></td>
+                <td class="text-center">&nbsp;</td>
+                <td class="text-right" style="font-weight: bold;"><?= number_format($grandTotalAmount, 2) ?></td>
+            </tr>
         </tbody>
     </table>
 
