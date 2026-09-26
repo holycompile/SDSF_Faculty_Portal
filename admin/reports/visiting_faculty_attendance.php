@@ -361,7 +361,7 @@ body {
                 <?php foreach ($distinctCourses as $cid => $c): ?>
                     <?php if ($c['has_theory'] && $c['has_practice']): ?>
                         <th class="sub-col-hdr">Theory</th>
-                        <th class="sub-col-hdr">Practice</th>
+                        <th class="sub-col-hdr">Practical</th>
                     <?php elseif ($c['has_practice']): ?>
                         <th class="sub-col-hdr">Practical</th>
                     <?php else: ?>
@@ -369,7 +369,7 @@ body {
                     <?php endif; ?>
                 <?php endforeach; ?>
                 <th class="sub-col-hdr" style="width:48px;">Theory</th>
-                <th class="sub-col-hdr" style="width:48px;">Practice</th>
+                <th class="sub-col-hdr" style="width:48px;">Practical</th>
             </tr>
         </thead>
         <tbody>
