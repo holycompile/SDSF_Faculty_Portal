@@ -57,7 +57,7 @@ Footer: Total Hours, Total Amount, Amount in Words
 Notes A-F (standard DAVV text)
 Undertaking paragraph (standard)
 Bottom: Banking details box (PAN, A/c, Bank, IFSC, Aadhaar) + Signature lines
-Second document: Attendance sheet with Date/Code/Name/Theory-Practice/Hours table
+Second document: Attendance sheet with Date/Code/Name/Theory/Practical/Hours table
 
 ## Design System
 Light mode. Background: #f1f5f9. Sidebar: white. Cards: white.
