@@ -200,6 +200,12 @@ $attendanceRegPage = $existingSnapshot['attendance_register_page'] ?? 'Page 02 -
 $chequeNo = $existingSnapshot['cheque_no'] ?? null;
 $displaySubmissionDate = ($grandTotalHours > 0 && !empty($submissionDate)) ? date('d/m/Y', strtotime($submissionDate)) : '';
 
+// Per-month overrides from snapshot; fallback to faculty-level defaults
+$displayTheoryPerWeek    = $existingSnapshot['theory_hours_per_week']    ?? ($faculty['theory_hours_per_week']    ?? null);
+$displayPracticalPerWeek = $existingSnapshot['practical_hours_per_week'] ?? ($faculty['practical_hours_per_week'] ?? null);
+$displaySemester         = $existingSnapshot['semester']                 ?? ($faculty['semester']                 ?? null);
+$displaySession          = $existingSnapshot['session_label']            ?? ($faculty['session_label']            ?? null);
+
 // Parse separate Page No and S.No for Annexure forms if stored together as "Page 02 - S.No. - 19"
 $displayPageNo = 'Page 02';
 $displaySNo = '19';

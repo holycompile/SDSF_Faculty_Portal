@@ -38,9 +38,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $bank_name     = trim($_POST['bank_name']     ?? '');
     $ifsc_code     = strtoupper(trim($_POST['ifsc_code'] ?? ''));
     $aadhaar_no    = trim($_POST['aadhaar_no']    ?? '');
-    $theory_rate   = (float)($_POST['theory_rate']   ?? 800.00);
-    $practical_rate= (float)($_POST['practical_rate']?? 400.00);
-    $status        = in_array($_POST['status'] ?? 'active', ['active', 'inactive']) ? $_POST['status'] : 'active';
+    $theory_rate             = (float)($_POST['theory_rate']            ?? 800.00);
+    $practical_rate          = (float)($_POST['practical_rate']           ?? 400.00);
+    // Per-month report card values
+    $theory_hours_per_week   = ($_POST['theory_hours_per_week'] ?? '') !== '' ? (float)$_POST['theory_hours_per_week'] : null;
+    $practical_hours_per_week= ($_POST['practical_hours_per_week'] ?? '') !== '' ? (float)$_POST['practical_hours_per_week'] : null;
+    $hw_month                = (int)($_POST['hw_month'] ?? 0);
+    $hw_year                 = (int)($_POST['hw_year']  ?? 0);
+    $semester                = trim($_POST['semester']       ?? '');
+    $session_label           = trim($_POST['session_label']  ?? '');
+    $ss_month                = (int)($_POST['ss_month'] ?? 0);
+    $ss_year                 = (int)($_POST['ss_year']  ?? 0);
+    $status                  = in_array($_POST['status'] ?? 'active', ['active', 'inactive']) ? $_POST['status'] : 'active';
 
     if ($theory_rate <= 0)    $theory_rate = 800.00;
     if ($practical_rate <= 0) $practical_rate = 400.00;
@@ -82,6 +91,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     department = ?,
                     theory_rate = ?,
                     practical_rate = ?,
+                    theory_hours_per_week = ?,
+                    practical_hours_per_week = ?,
+                    semester = ?,
+                    session_label = ?,
                     pan_no = ?,
                     account_no = ?,
                     bank_name = ?,
@@ -92,7 +105,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $upd->execute([
                 $enrollment_no, $name, $email, $phone, $address, $qualification, $department,
-                $theory_rate, $practical_rate, $pan_no, $account_no, $bank_name, $ifsc_code, $aadhaar_no,
+                $theory_rate, $practical_rate,
+                $theory_hours_per_week, $practical_hours_per_week,
+                ($semester !== '' ? $semester : null),
+                ($session_label !== '' ? $session_label : null),
+                $pan_no, $account_no, $bank_name, $ifsc_code, $aadhaar_no,
                 $status, $id
             ]);
 
@@ -121,6 +138,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->commit();
 
+            // 5. Save per-month Weekly Hours into monthly_report_submissions
+            if ($hw_month >= 1 && $hw_month <= 12 && $hw_year >= 2020) {
+                try {
+                    $pdo->prepare("
+                        INSERT INTO monthly_report_submissions
+                            (faculty_id, month, year, submission_date, theory_rate, practical_rate, theory_hours_per_week, practical_hours_per_week)
+                        VALUES (?, ?, ?, CURDATE(), ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE
+                            theory_hours_per_week   = VALUES(theory_hours_per_week),
+                            practical_hours_per_week = VALUES(practical_hours_per_week)
+                    ")->execute([$id, $hw_month, $hw_year, $theory_rate, $practical_rate, $theory_hours_per_week, $practical_hours_per_week]);
+                } catch (Exception $ex) { error_log('hw_upsert: ' . $ex->getMessage()); }
+            }
+
+            // 6. Save per-month Semester/Session into monthly_report_submissions
+            if ($ss_month >= 1 && $ss_month <= 12 && $ss_year >= 2020) {
+                try {
+                    $pdo->prepare("
+                        INSERT INTO monthly_report_submissions
+                            (faculty_id, month, year, submission_date, theory_rate, practical_rate, semester, session_label)
+                        VALUES (?, ?, ?, CURDATE(), ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE
+                            semester      = VALUES(semester),
+                            session_label = VALUES(session_label)
+                    ")->execute([$id, $ss_month, $ss_year, $theory_rate, $practical_rate,
+                        ($semester !== '' ? $semester : null),
+                        ($session_label !== '' ? $session_label : null)]);
+                } catch (Exception $ex) { error_log('ss_upsert: ' . $ex->getMessage()); }
+            }
+
             setFlash('success', "Faculty profile updated successfully! Enrollment No: <strong>{$enrollment_no}</strong>");
             header('Location: ' . BASE_URL . '/admin/faculty/view.php?id=' . $id);
             exit;
@@ -134,6 +181,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $active_nav = 'faculty-list';
+
+// Fetch all monthly snapshots for this faculty to allow month-by-month switching
+$mSubStmt = $pdo->prepare("
+    SELECT month, year, theory_hours_per_week, practical_hours_per_week, semester, session_label
+    FROM monthly_report_submissions
+    WHERE faculty_id = ?
+");
+$mSubStmt->execute([$id]);
+$allSnapshots = [];
+while ($row = $mSubStmt->fetch(PDO::FETCH_ASSOC)) {
+    $allSnapshots[$row['year'] . '_' . $row['month']] = $row;
+}
+
+$initHwMonth = (int)($_POST['hw_month'] ?? ($_GET['month'] ?? 9));
+$initHwYear  = (int)($_POST['hw_year']  ?? ($_GET['year']  ?? 2026));
+$initSsMonth = (int)($_POST['ss_month'] ?? ($_GET['month'] ?? 9));
+$initSsYear  = (int)($_POST['ss_year']  ?? ($_GET['year']  ?? 2026));
+
+$hwKey = "{$initHwYear}_{$initHwMonth}";
+$ssKey = "{$initSsYear}_{$initSsMonth}";
+
+$valTheoryHrs   = $_POST['theory_hours_per_week']   ?? ($allSnapshots[$hwKey]['theory_hours_per_week']   ?? $faculty['theory_hours_per_week']   ?? '');
+$valPracticalHrs= $_POST['practical_hours_per_week']?? ($allSnapshots[$hwKey]['practical_hours_per_week']?? $faculty['practical_hours_per_week']?? '');
+$valSemester    = $_POST['semester']                ?? ($allSnapshots[$ssKey]['semester']                ?? $faculty['semester']                ?? '');
+$valSession     = $_POST['session_label']           ?? ($allSnapshots[$ssKey]['session_label']           ?? $faculty['session_label']           ?? '');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -343,6 +415,124 @@ $active_nav = 'faculty-list';
             </div>
         </div>
 
+        <!-- Weekly Hours Assignment Card -->
+        <div class="card" style="border-left:4px solid #0ea5e9;">
+            <div class="card-head">
+                <div>
+                    <div class="card-title" style="display:flex;align-items:center;gap:8px;">
+                        <span>📊 Weekly Hours Assignment</span>
+                        <span class="badge" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;">Reflects in Annexure-IV</span>
+                    </div>
+                    <div class="card-sub">Set declared theory &amp; practical hours per week for a specific month — shown in the Annexure-IV (Claim Bill) header</div>
+                </div>
+            </div>
+            <div style="padding:24px 28px;">
+                <!-- Month & Year selector for this card -->
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:12px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;">
+                    <span style="font-size:13px;font-weight:700;color:#0369a1;white-space:nowrap;">📅 Apply to Month &amp; Year:</span>
+                    <select name="hw_month" id="hw_month" class="form-select" style="max-width:160px;">
+                        <option value="">— Select Month —</option>
+                        <?php for ($m = 1; $m <= 12; $m++): ?>
+                            <option value="<?= $m ?>" <?= $initHwMonth === $m ? 'selected' : '' ?>>
+                                <?= date('F', mktime(0,0,0,$m,1)) ?>
+                            </option>
+                        <?php endfor; ?>
+                    </select>
+                    <select name="hw_year" id="hw_year" class="form-select" style="max-width:110px;">
+                        <option value="">— Year —</option>
+                        <?php for ($y = 2026; $y <= 2030; $y++): ?>
+                            <option value="<?= $y ?>" <?= $initHwYear === $y ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                    <span style="font-size:12px;color:#0369a1;">Values reflect specifically in Annexure-IV for this month &amp; year</span>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" style="color:#0369a1;">Total Theory Classes (hrs/week)</label>
+                        <div style="position:relative;">
+                            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#64748b;font-size:13px;font-weight:600;">T</span>
+                            <input type="number" step="0.5" min="0" max="50" name="theory_hours_per_week" id="theory_hours_per_week"
+                                    class="form-input"
+                                    style="padding-left:32px;font-weight:700;color:#0f172a;"
+                                    placeholder="e.g. 15"
+                                    value="<?= htmlspecialchars((string)$valTheoryHrs) ?>">
+                        </div>
+                        <div style="font-size:12px;color:#64748b;margin-top:5px;">Declared theory hrs per week (as per appointment letter)</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="color:#0369a1;">Total Practical Classes (hrs/week)</label>
+                        <div style="position:relative;">
+                            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#64748b;font-size:13px;font-weight:600;">P</span>
+                            <input type="number" step="0.5" min="0" max="50" name="practical_hours_per_week" id="practical_hours_per_week"
+                                    class="form-input"
+                                    style="padding-left:32px;font-weight:700;color:#0f172a;"
+                                    placeholder="e.g. 4"
+                                    value="<?= htmlspecialchars((string)$valPracticalHrs) ?>">
+                        </div>
+                        <div style="font-size:12px;color:#64748b;margin-top:5px;">Declared practical hrs per week (as per appointment letter)</div>
+                    </div>
+                </div>
+                <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;font-size:12.5px;color:#0369a1;display:flex;align-items:center;gap:8px;">
+                    <span>ℹ️</span>
+                    <span>Select a month &amp; year above, then enter values. These appear as <strong>"Theory: ___ &nbsp; Practical: ___ hrs per week"</strong> in Annexure-IV for that month.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session & Semester Info Card -->
+        <div class="card" style="border-left:4px solid #8b5cf6;">
+            <div class="card-head">
+                <div>
+                    <div class="card-title" style="display:flex;align-items:center;gap:8px;">
+                        <span>🗓️ Session &amp; Semester Information</span>
+                        <span class="badge" style="background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;">Reflects in Teaching Attendance</span>
+                    </div>
+                    <div class="card-sub">Set the academic session &amp; semester for a specific month — shown in the Visiting Faculty Teaching Attendance sheet</div>
+                </div>
+            </div>
+            <div style="padding:24px 28px;">
+                <!-- Month & Year selector for this card -->
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:12px 16px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;">
+                    <span style="font-size:13px;font-weight:700;color:#6d28d9;white-space:nowrap;">📅 Apply to Month &amp; Year:</span>
+                    <select name="ss_month" id="ss_month" class="form-select" style="max-width:160px;">
+                        <option value="">— Select Month —</option>
+                        <?php for ($m = 1; $m <= 12; $m++): ?>
+                            <option value="<?= $m ?>" <?= $initSsMonth === $m ? 'selected' : '' ?>>
+                                <?= date('F', mktime(0,0,0,$m,1)) ?>
+                            </option>
+                        <?php endfor; ?>
+                    </select>
+                    <select name="ss_year" id="ss_year" class="form-select" style="max-width:110px;">
+                        <option value="">— Year —</option>
+                        <?php for ($y = 2026; $y <= 2030; $y++): ?>
+                            <option value="<?= $y ?>" <?= $initSsYear === $y ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                    <span style="font-size:12px;color:#6d28d9;">Values reflect specifically in the Teaching Attendance sheet for this month &amp; year</span>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" style="color:#6d28d9;">Semester</label>
+                        <input type="text" name="semester" id="semester" class="form-input"
+                               placeholder="e.g. III or Odd 2026"
+                               value="<?= htmlspecialchars((string)$valSemester) ?>">
+                        <div style="font-size:12px;color:#64748b;margin-top:5px;">Appears as <strong>Semester :</strong> in the Teaching Attendance sheet</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="color:#6d28d9;">Session</label>
+                        <input type="text" name="session_label" id="session_label" class="form-input"
+                               placeholder="e.g. July 2026 – Dec 2026"
+                               value="<?= htmlspecialchars((string)$valSession) ?>">
+                        <div style="font-size:12px;color:#64748b;margin-top:5px;">Appears as <strong>Session :</strong> in the Teaching Attendance sheet</div>
+                    </div>
+                </div>
+                <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:10px 14px;font-size:12.5px;color:#6d28d9;display:flex;align-items:center;gap:8px;">
+                    <span>ℹ️</span>
+                    <span>Select a month &amp; year above, then enter values. These appear in the <strong>Teaching Attendance</strong> sheet for that month.</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Banking Details -->
         <div class="card">
             <div class="card-head">
@@ -405,6 +595,64 @@ function suggestEnrollmentNo() {
     const prefix = (clean.length >= 4 ? clean.substring(0, 4) : clean.padEnd(4, 'X'));
     enrollInput.value = prefix + '0001';
 }
+
+// Monthly snapshots data for live switching
+const monthlySnapshots = <?= json_encode($allSnapshots) ?>;
+const facultyDefaults = {
+    theory_hours_per_week: <?= json_encode($faculty['theory_hours_per_week']) ?>,
+    practical_hours_per_week: <?= json_encode($faculty['practical_hours_per_week']) ?>,
+    semester: <?= json_encode($faculty['semester']) ?>,
+    session_label: <?= json_encode($faculty['session_label']) ?>
+};
+
+function updateWeeklyHoursFromSnapshot() {
+    const m = document.getElementById('hw_month').value;
+    const y = document.getElementById('hw_year').value;
+    const tInput = document.getElementById('theory_hours_per_week');
+    const pInput = document.getElementById('practical_hours_per_week');
+    if (!m || !y) return;
+    const key = y + '_' + m;
+    const snap = monthlySnapshots[key] || {};
+    
+    if (snap.theory_hours_per_week !== undefined && snap.theory_hours_per_week !== null) {
+        tInput.value = snap.theory_hours_per_week;
+    } else {
+        tInput.value = facultyDefaults.theory_hours_per_week ?? '';
+    }
+
+    if (snap.practical_hours_per_week !== undefined && snap.practical_hours_per_week !== null) {
+        pInput.value = snap.practical_hours_per_week;
+    } else {
+        pInput.value = facultyDefaults.practical_hours_per_week ?? '';
+    }
+}
+
+function updateSemesterSessionFromSnapshot() {
+    const m = document.getElementById('ss_month').value;
+    const y = document.getElementById('ss_year').value;
+    const semInput = document.getElementById('semester');
+    const sessInput = document.getElementById('session_label');
+    if (!m || !y) return;
+    const key = y + '_' + m;
+    const snap = monthlySnapshots[key] || {};
+
+    if (snap.semester !== undefined && snap.semester !== null && snap.semester !== '') {
+        semInput.value = snap.semester;
+    } else {
+        semInput.value = facultyDefaults.semester ?? '';
+    }
+
+    if (snap.session_label !== undefined && snap.session_label !== null && snap.session_label !== '') {
+        sessInput.value = snap.session_label;
+    } else {
+        sessInput.value = facultyDefaults.session_label ?? '';
+    }
+}
+
+document.getElementById('hw_month')?.addEventListener('change', updateWeeklyHoursFromSnapshot);
+document.getElementById('hw_year')?.addEventListener('change', updateWeeklyHoursFromSnapshot);
+document.getElementById('ss_month')?.addEventListener('change', updateSemesterSessionFromSnapshot);
+document.getElementById('ss_year')?.addEventListener('change', updateSemesterSessionFromSnapshot);
 </script>
 </body>
 </html>

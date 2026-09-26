@@ -313,11 +313,11 @@ body {
         </tr>
         <tr>
             <td>Month and Year - <strong><?= $monthShortStr . ' ' . $year ?></strong></td>
-            <td>Semester : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+            <td>Semester : <strong><?= !empty($displaySemester) ? htmlspecialchars($displaySemester) : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' ?></strong></td>
         </tr>
         <tr>
             <td></td>
-            <td>Session : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+            <td>Session : <strong><?= !empty($displaySession) ? htmlspecialchars($displaySession) : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' ?></strong></td>
         </tr>
     </table>
 

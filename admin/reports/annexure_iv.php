@@ -353,7 +353,7 @@ body {
         <div>Month: <span class="underline-fill" style="min-width: 65px;"><?= $monthShortStr ?></span></div>
         <div>Year: <span class="underline-fill" style="min-width: 55px;"><?= $year ?></span></div>
         <div>Date of Submission: <span class="underline-fill" style="min-width: 90px;"><?= $displaySubmissionDate ?></span></div>
-        <div>Theory: <span class="underline-fill" style="min-width: 40px;"><?= (float)$totalTheoryHours ?></span> &nbsp; Practical: <span class="underline-fill" style="min-width: 40px;"><?= (float)$totalPracticalHours ?></span> hrs per week</div>
+        <div>Theory: <span class="underline-fill" style="min-width: 40px;"><?= $displayTheoryPerWeek !== null ? (float)$displayTheoryPerWeek : '' ?></span> &nbsp; Practical: <span class="underline-fill" style="min-width: 40px;"><?= $displayPracticalPerWeek !== null ? (float)$displayPracticalPerWeek : '' ?></span> hrs per week</div>
     </div>
 
     <!-- MAIN SUMMARY TABLE -->
