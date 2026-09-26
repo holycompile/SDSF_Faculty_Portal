@@ -325,9 +325,9 @@ body {
             Department/School/Centre: <span class="underline-fill" style="min-width:340px;"><?= htmlspecialchars($deptName) ?></span>
         </div>
         <div class="reg-line">
-            Page No. of Attendance Register: <span class="underline-fill" style="min-width:90px;"><?= htmlspecialchars($attendanceRegPage) ?></span>
+            Page No. of Attendance Register: <span class="underline-fill" style="min-width:90px;"><?= htmlspecialchars($displayPageNo) ?></span>
             &nbsp;&nbsp;&nbsp;&nbsp;
-            S.No.: <span class="underline-fill" style="min-width:70px;"><?= !empty($existingSnapshot['id']) ? sprintf('%02d', $existingSnapshot['id']) : '01' ?></span>
+            S.No.: <span class="underline-fill" style="min-width:70px;"><?= htmlspecialchars($displaySNo) ?></span>
         </div>
         <div class="bill-title">Bill for Claiming Remuneration/Honorarium for Visiting Faculty</div>
     </div>
@@ -349,11 +349,11 @@ body {
         <div>Mob No.: <span class="underline-fill" style="min-width: 170px;"><?= htmlspecialchars($faculty['phone'] ?? '—') ?></span></div>
         <div>Qualification: <span class="underline-fill" style="min-width: 250px;"><?= htmlspecialchars($faculty['qualification'] ?? '—') ?></span></div>
     </div>
-    <div class="meta-field-row" style="display:flex;justify-content:space-between;">
-        <div>Month: <span class="underline-fill" style="min-width: 75px;"><?= $monthShortStr ?></span></div>
-        <div>Year: <span class="underline-fill" style="min-width: 60px;"><?= $year ?></span></div>
-        <div>Date of Submission: <span class="underline-fill" style="min-width: 95px;"><?= $displaySubmissionDate ?></span></div>
-        <div>Theory/Practical: <span class="underline-fill" style="min-width: 50px;"><?= $grandTotalHours ?></span> hrs per week</div>
+    <div class="meta-field-row" style="display:flex;justify-content:space-between;align-items:center;">
+        <div>Month: <span class="underline-fill" style="min-width: 65px;"><?= $monthShortStr ?></span></div>
+        <div>Year: <span class="underline-fill" style="min-width: 55px;"><?= $year ?></span></div>
+        <div>Date of Submission: <span class="underline-fill" style="min-width: 90px;"><?= $displaySubmissionDate ?></span></div>
+        <div>Theory: <span class="underline-fill" style="min-width: 40px;"><?= (float)$totalTheoryHours ?></span> &nbsp; Practical: <span class="underline-fill" style="min-width: 40px;"><?= (float)$totalPracticalHours ?></span> hrs per week</div>
     </div>
 
     <!-- MAIN SUMMARY TABLE -->

@@ -200,6 +200,18 @@ $attendanceRegPage = $existingSnapshot['attendance_register_page'] ?? 'Page 02 -
 $chequeNo = $existingSnapshot['cheque_no'] ?? null;
 $displaySubmissionDate = ($grandTotalHours > 0 && !empty($submissionDate)) ? date('d/m/Y', strtotime($submissionDate)) : '';
 
+// Parse separate Page No and S.No for Annexure forms if stored together as "Page 02 - S.No. - 19"
+$displayPageNo = 'Page 02';
+$displaySNo = '19';
+if (!empty($attendanceRegPage)) {
+    if (preg_match('/^(.*?)(?:\s*-\s*S\.No\.?\s*[-:]?\s*|\s+S\.No\.?\s*[-:]?\s*)(.*)$/i', $attendanceRegPage, $m)) {
+        $displayPageNo = trim($m[1]);
+        $displaySNo = trim($m[2]);
+    } else {
+        $displayPageNo = trim($attendanceRegPage);
+    }
+}
+
 // ─── UPSERT PERMANENT MONTHLY SNAPSHOT (Active faculty only) ─────────────────
 if ($archiveId === 0 && $grandTotalHours > 0) {
     try {

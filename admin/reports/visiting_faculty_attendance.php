@@ -313,9 +313,27 @@ body {
         </tr>
         <tr>
             <td>Month and Year - <strong><?= $monthShortStr . ' ' . $year ?></strong></td>
-            <td>Semester and Session - <strong><?= htmlspecialchars($sessionStr) ?></strong></td>
+            <td>Semester and Session - </td>
         </tr>
     </table>
+
+    <?php
+    // Calculate per-course column totals
+    $courseTotals = [];
+    foreach ($distinctCourses as $cid => $c) {
+        $courseTotals[$cid] = ['theory' => 0.0, 'practical' => 0.0];
+    }
+    if (!empty($dailyLectures)) {
+        foreach ($dailyLectures as $dStr => $row) {
+            foreach ($distinctCourses as $cid => $c) {
+                if (isset($row['by_course'][$cid])) {
+                    $courseTotals[$cid]['theory'] += (float)($row['by_course'][$cid]['theory'] ?? 0.0);
+                    $courseTotals[$cid]['practical'] += (float)($row['by_course'][$cid]['practical'] ?? 0.0);
+                }
+            }
+        }
+    }
+    ?>
 
     <!-- MATRIX ATTENDANCE TABLE -->
     <table class="matrix-table">
@@ -384,7 +402,7 @@ body {
             endif; 
 
             // Pad empty rows to match authentic register height (min 20 rows like Screenshot 2 & 5)
-            $targetRows = 22;
+            $targetRows = 21;
             for ($i = $printedRows; $i < $targetRows; $i++):
             ?>
                 <tr>
@@ -400,6 +418,28 @@ body {
                     <td>&nbsp;</td>
                 </tr>
             <?php endfor; ?>
+
+            <!-- TOTAL CLASSES ROW -->
+            <tr style="font-weight: bold;">
+                <td class="col-date" style="font-weight: bold; font-size: 9.5pt;">Total Classes</td>
+                <?php foreach ($distinctCourses as $cid => $c): ?>
+                    <?php 
+                    $cTh = $courseTotals[$cid]['theory'] ?? 0.0;
+                    $cPr = $courseTotals[$cid]['practical'] ?? 0.0;
+                    ?>
+                    <?php if ($c['has_theory'] && $c['has_practice']): ?>
+                        <td class="val-cell" style="font-weight: bold;"><?= (float)$cTh ?></td>
+                        <td class="val-cell" style="font-weight: bold;"><?= (float)$cPr ?></td>
+                    <?php elseif ($c['has_practice']): ?>
+                        <td class="val-cell" style="font-weight: bold;"><?= (float)$cPr ?></td>
+                    <?php else: ?>
+                        <td class="val-cell" style="font-weight: bold;"><?= (float)$cTh ?></td>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+                <!-- TOTAL LECTURES -->
+                <td class="val-cell" style="font-weight: bold;"><?= (float)$totalTheoryHours ?></td>
+                <td class="val-cell" style="font-weight: bold;"><?= (float)$totalPracticalHours ?></td>
+            </tr>
         </tbody>
     </table>
 
