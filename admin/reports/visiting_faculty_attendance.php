@@ -313,7 +313,11 @@ body {
         </tr>
         <tr>
             <td>Month and Year - <strong><?= $monthShortStr . ' ' . $year ?></strong></td>
-            <td>Semester and Session - </td>
+            <td>Semester : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>Session : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
         </tr>
     </table>
 
